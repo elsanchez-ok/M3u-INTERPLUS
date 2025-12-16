@@ -2,9 +2,9 @@
 class SecureStreamAuth {
     constructor() {
         this.config = {
-            BASE_URL: 'https://nocodb.yourdomain.com', // REEMPLAZAR
-            PROJECT_ID: 'p_xxxxxxxxxxxx', // REEMPLAZAR
-            API_TOKEN: 'your-nocodb-api-token', // REEMPLAZAR
+            BASE_URL: 'https://app.nocodb.com/api/v3/meta/bases/p5xsjpo507ot933/swagger', // REEMPLAZAR
+            PROJECT_ID: 'p5xsjpo507ot933', // REEMPLAZAR
+            API_TOKEN: 'ZedVPgS8jEw22E1zo5Icw2IFLG2jbJhOy77qkw7j', // REEMPLAZAR
             STORAGE_KEY: 'secure_stream_auth',
             DEVICE_KEY: 'secure_stream_device',
             TOKEN_KEY: 'secure_stream_token'
