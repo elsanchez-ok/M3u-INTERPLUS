@@ -1,9 +1,9 @@
-// auth-personal.js - Para cuenta personal de Google
+// auth-personal.js - Para cuenta personal de Google (VERSIÓN CORREGIDA)
 class PersonalGoogleAuth {
     constructor() {
-        // PEGA TU URL AQUÍ ↓
+        // PEGA TU URL DE GOOGLE APPS SCRIPT AQUÍ ↓
         this.config = {
-            API_URL: 'https://script.google.com/macros/s/TU_ID_NUEVO/exec',
+            API_URL: 'https://script.google.com/macros/u/1/s/AKfycbxB3lJLiei_7YtkKyQ39OsEhScDCyZnoYoAS50ZKdd5cyq3_L3wFi5Pki0pilQZM35aCw/exec',
             STORAGE_KEY: 'secure_stream_auth',
             DEVICE_KEY: 'secure_stream_device'
         };
@@ -26,16 +26,16 @@ class PersonalGoogleAuth {
         return deviceId;
     }
 
-    // Método PRINCIPAL para llamar al API
+    // Método PRINCIPAL para llamar al API - CORREGIDO CORS
     async callAPI(action, data = {}) {
         try {
             console.log(`📤 ${action}:`, data);
             
-            // Usar POST para enviar datos (más seguro)
+            // USAMOS text/plain PARA EVITAR PREFLIGHT CORS
             const response = await fetch(this.config.API_URL, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'text/plain;charset=utf-8'  // ← CLAVE PARA CORS
                 },
                 body: JSON.stringify({
                     action: action,
@@ -91,6 +91,7 @@ class PersonalGoogleAuth {
             
             document.head.appendChild(script);
             
+            // Timeout
             setTimeout(() => {
                 if (window[callbackName]) {
                     resolve({ success: false, error: 'Timeout' });
@@ -185,7 +186,7 @@ class PersonalGoogleAuth {
 
 const SecureAuth = new PersonalGoogleAuth();
 
-// Debug
+// Función de debug
 window.debugPersonal = function() {
     console.log('=== DEBUG PERSONAL ===');
     console.log('API URL:', SecureAuth.config.API_URL);
