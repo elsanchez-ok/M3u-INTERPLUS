@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureStream Pro | Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- AQUÍ VAN LOS LINKS DE CSS -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/login.css">
-    
 </head>
 <body class="login-page">
     
@@ -38,18 +35,22 @@
         
         <!-- Formulario -->
         <div class="input-group">
-            <label for="username"><i class="fas fa-user"></i> Usuario</label>
+            <label for="username" class="input-label">
+                <i class="fas fa-user"></i> Usuario
+            </label>
             <div class="input-wrapper">
                 <i class="fas fa-user-circle"></i>
-                <input type="text" id="username" placeholder="Ingresa tu usuario" value="admin">
+                <input type="text" id="username" class="login-input" placeholder="Ingresa tu usuario">
             </div>
         </div>
         
         <div class="input-group">
-            <label for="password"><i class="fas fa-key"></i> Contraseña</label>
+            <label for="password" class="input-label">
+                <i class="fas fa-key"></i> Contraseña
+            </label>
             <div class="input-wrapper">
                 <i class="fas fa-lock"></i>
-                <input type="password" id="password" placeholder="Ingresa tu contraseña" value="admin123">
+                <input type="password" id="password" class="login-input" placeholder="Ingresa tu contraseña">
             </div>
         </div>
         
@@ -58,21 +59,21 @@
             <span>ACCEDER AL SISTEMA</span>
         </button>
         
-        <!-- Información de usuarios -->
+        <!-- Información del sistema (sin credenciales) -->
         <div class="user-info">
-            <h3><i class="fas fa-users"></i> Usuarios de Prueba</h3>
+            <h3><i class="fas fa-info-circle"></i> Información del Sistema</h3>
             <ul>
                 <li>
-                    <span>admin</span>
-                    <span class="user-type admin">ADMIN</span>
+                    <span>Versión:</span>
+                    <span style="color: #00b7ff;">SecureStream Pro v3.0</span>
                 </li>
                 <li>
-                    <span>usuario</span>
-                    <span class="user-type user">USER</span>
+                    <span>Modo:</span>
+                    <span style="color: #00ff88;">GitHub Pages</span>
                 </li>
                 <li>
-                    <span>invitado</span>
-                    <span class="user-type user">USER</span>
+                    <span>Seguridad:</span>
+                    <span style="color: #ffaa00;">Dispositivo Único</span>
                 </li>
             </ul>
         </div>
@@ -86,93 +87,126 @@
 
     <!-- Scripts -->
     <script src="js/auth-system.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', async function() {
-        // Verificar si ya está autenticado
-        const isAuthenticated = await SecureAuth.verifySession();
-        
-        if (isAuthenticated) {
-            const user = SecureAuth.getCurrentUser();
-            if (user && user.user_type === 'admin') {
-                window.location.href = 'admin.html';
-            } else if (user) {
-                window.location.href = 'dashboard.html';
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Verificar si ya está autenticado
+            const isAuthenticated = await SecureAuth.verifySession();
+            
+            if (isAuthenticated) {
+                const user = SecureAuth.getCurrentUser();
+                if (user && user.user_type === 'admin') {
+                    window.location.href = 'admin.html';
+                } else if (user) {
+                    window.location.href = 'dashboard.html';
+                }
             }
-        }
-        
-        // Configurar botón de login
-        const loginBtn = document.getElementById('loginBtn');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        
-        loginBtn.addEventListener('click', handleLogin);
-        
-        // Login con Enter
-        passwordInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                handleLogin();
+            
+            // Crear partículas
+            createParticles();
+            
+            // Configurar botón de login
+            const loginBtn = document.getElementById('loginBtn');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            
+            loginBtn.addEventListener('click', handleLogin);
+            
+            // Login con Enter
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleLogin();
+                }
+            });
+            
+            async function handleLogin() {
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value;
+                
+                if (!username || !password) {
+                    showMessage('error', 'Por favor completa todos los campos');
+                    return;
+                }
+                
+                // Mostrar loading
+                document.getElementById('loading').style.display = 'block';
+                loginBtn.style.display = 'none';
+                
+                try {
+                    const result = await SecureAuth.login(username, password);
+                    
+                    // Ocultar loading
+                    document.getElementById('loading').style.display = 'none';
+                    loginBtn.style.display = 'flex';
+                    
+                    if (result.success) {
+                        showMessage('success', `¡Bienvenido ${result.user.name}!`);
+                        
+                        // Redirigir
+                        setTimeout(() => {
+                            if (result.user.user_type === 'admin') {
+                                window.location.href = 'admin.html';
+                            } else {
+                                window.location.href = 'dashboard.html';
+                            }
+                        }, 1000);
+                    } else {
+                        showMessage('error', result.error);
+                    }
+                } catch (error) {
+                    document.getElementById('loading').style.display = 'none';
+                    loginBtn.style.display = 'flex';
+                    showMessage('error', 'Error de conexión con el servidor');
+                }
+            }
+            
+            function showMessage(type, text) {
+                const messageBox = document.getElementById('messageBox');
+                if (!messageBox) return;
+                
+                messageBox.className = `message-box ${type}`;
+                messageBox.innerHTML = `
+                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
+                                      type === 'success' ? 'check-circle' : 
+                                      'info-circle'}"></i>
+                    ${text}
+                `;
+                messageBox.style.display = 'block';
+                
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        messageBox.style.display = 'none';
+                    }, 5000);
+                }
+            }
+            
+            // Función para crear partículas
+            function createParticles() {
+                const particlesContainer = document.getElementById('particles');
+                if (!particlesContainer) return;
+                
+                const particleCount = 30;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    
+                    const left = Math.random() * 100;
+                    const top = Math.random() * 100 + 100; // Empezar desde abajo
+                    const size = Math.random() * 2 + 1;
+                    const duration = Math.random() * 10 + 20;
+                    const delay = Math.random() * 5;
+                    
+                    particle.style.left = `${left}%`;
+                    particle.style.top = `${top}%`;
+                    particle.style.width = `${size}px`;
+                    particle.style.height = `${size}px`;
+                    particle.style.animationDuration = `${duration}s`;
+                    particle.style.animationDelay = `${delay}s`;
+                    
+                    particlesContainer.appendChild(particle);
+                }
             }
         });
-        
-        async function handleLogin() {
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value;
-            
-            if (!username || !password) {
-                showMessage('error', 'Por favor completa todos los campos');
-                return;
-            }
-            
-            // Mostrar loading
-            document.getElementById('loading').style.display = 'block';
-            loginBtn.style.display = 'none';
-            
-            try {
-                const result = await SecureAuth.login(username, password);
-                
-                // Ocultar loading
-                document.getElementById('loading').style.display = 'none';
-                loginBtn.style.display = 'flex';
-                
-                if (result.success) {
-                    showMessage('success', `¡Bienvenido ${result.user.name}!`);
-                    
-                    // Redirigir
-                    setTimeout(() => {
-                        if (result.user.user_type === 'admin') {
-                            window.location.href = 'admin.html';
-                        } else {
-                            window.location.href = 'dashboard.html';
-                        }
-                    }, 1000);
-                } else {
-                    showMessage('error', result.error);
-                }
-            } catch (error) {
-                document.getElementById('loading').style.display = 'none';
-                loginBtn.style.display = 'flex';
-                showMessage('error', 'Error de conexión con el servidor');
-            }
-        }
-        
-        function showMessage(type, text) {
-            const messageBox = document.getElementById('messageBox');
-            messageBox.className = `message-box ${type}`;
-            messageBox.innerHTML = `
-                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
-                                  type === 'success' ? 'check-circle' : 
-                                  'info-circle'}"></i>
-                ${text}
-            `;
-            messageBox.style.display = 'block';
-            
-            if (type !== 'error') {
-                setTimeout(() => {
-                    messageBox.style.display = 'none';
-                }, 5000);
-            }
-        }
-    });
-</script>
+    </script>
 </body>
 </html>
