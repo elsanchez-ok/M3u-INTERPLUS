@@ -10,9 +10,6 @@
 </head>
 <body class="login-page">
     
-    <!-- Partículas -->
-    <div class="particles" id="particles"></div>
-    
     <!-- Contenedor de login -->
     <div class="login-container">
         <!-- Logo -->
@@ -33,47 +30,83 @@
             <p>Verificando credenciales...</p>
         </div>
         
-        <!-- Formulario -->
-        <div class="input-group">
-            <label for="username" class="input-label">
-                <i class="fas fa-user"></i> Usuario
-            </label>
-            <div class="input-wrapper">
-                <i class="fas fa-user-circle"></i>
-                <input type="text" id="username" class="login-input" placeholder="Ingresa tu usuario">
+        <!-- Formulario PRINCIPAL -->
+        <div id="mainForm">
+            <div class="input-group">
+                <label for="username" class="input-label">
+                    <i class="fas fa-user"></i> Usuario
+                </label>
+                <div class="input-wrapper">
+                    <i class="fas fa-user-circle"></i>
+                    <input type="text" id="username" class="login-input" placeholder="Ingresa tu usuario">
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="password" class="input-label">
+                    <i class="fas fa-key"></i> Contraseña
+                </label>
+                <div class="input-wrapper">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" class="login-input" placeholder="Ingresa tu contraseña">
+                </div>
+            </div>
+            
+            <button class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>INICIAR SESIÓN</span>
+            </button>
+        </div>
+        
+        <!-- Formulario de PIN (oculto inicialmente) -->
+        <div id="pinForm" style="display: none;">
+            <div class="input-group">
+                <label class="input-label">
+                    <i class="fas fa-lock"></i> Verificación de Seguridad
+                </label>
+                <p style="color: #a0cfff; text-align: center; margin-bottom: 20px; font-size: 14px;">
+                    Ingresa el PIN de seguridad para continuar.<br>
+                    <small style="color: #ffaa00;">Mismo PIN en todos los dispositivos</small>
+                </p>
+            </div>
+            
+            <div class="input-group">
+                <label for="pinCode" class="input-label">
+                    <i class="fas fa-keyboard"></i> PIN de 4 dígitos
+                </label>
+                <div class="input-wrapper">
+                    <i class="fas fa-hashtag"></i>
+                    <input type="password" id="pinCode" class="login-input" placeholder="1234" maxlength="4" inputmode="numeric">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-warning" id="cancelPinBtn" style="flex: 1;">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button class="btn-login" id="verifyPinBtn" style="flex: 1;">
+                    <i class="fas fa-check"></i>
+                    Verificar
+                </button>
             </div>
         </div>
         
-        <div class="input-group">
-            <label for="password" class="input-label">
-                <i class="fas fa-key"></i> Contraseña
-            </label>
-            <div class="input-wrapper">
-                <i class="fas fa-lock"></i>
-                <input type="password" id="password" class="login-input" placeholder="Ingresa tu contraseña">
-            </div>
-        </div>
-        
-        <button class="btn-login" id="loginBtn">
-            <i class="fas fa-sign-in-alt"></i>
-            <span>ACCEDER AL SISTEMA</span>
-        </button>
-        
-        <!-- Información del sistema (sin credenciales) -->
+        <!-- Información del sistema -->
         <div class="user-info">
             <h3><i class="fas fa-info-circle"></i> Información del Sistema</h3>
             <ul>
                 <li>
-                    <span>Versión:</span>
-                    <span style="color: #00b7ff;">SecureStream Pro v3.0</span>
+                    <span>Credenciales:</span>
+                    <span style="color: #00b7ff;">admin / admin123</span>
                 </li>
                 <li>
-                    <span>Modo:</span>
-                    <span style="color: #00ff88;">GitHub Pages</span>
+                    <span>PIN por defecto:</span>
+                    <span style="color: #00ff88;">1234</span>
                 </li>
                 <li>
-                    <span>Seguridad:</span>
-                    <span style="color: #ffaa00;">Dispositivo Único</span>
+                    <span>Sesión:</span>
+                    <span style="color: #ffaa00;">60 minutos</span>
                 </li>
             </ul>
         </div>
@@ -86,8 +119,12 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/auth-system.js"></script>
+    <script src="js/auth-simple.js"></script>
     <script>
+        // Variables globales para almacenar credenciales temporalmente
+        let tempUsername = '';
+        let tempPassword = '';
+        
         document.addEventListener('DOMContentLoaded', async function() {
             // Verificar si ya está autenticado
             const isAuthenticated = await SecureAuth.verifySession();
@@ -101,112 +138,145 @@
                 }
             }
             
-            // Crear partículas
-            createParticles();
-            
-            // Configurar botón de login
+            // Configurar botones
             const loginBtn = document.getElementById('loginBtn');
-            const usernameInput = document.getElementById('username');
-            const passwordInput = document.getElementById('password');
+            const verifyPinBtn = document.getElementById('verifyPinBtn');
+            const cancelPinBtn = document.getElementById('cancelPinBtn');
+            const mainForm = document.getElementById('mainForm');
+            const pinForm = document.getElementById('pinForm');
             
+            // Login normal
             loginBtn.addEventListener('click', handleLogin);
             
+            // Verificar PIN
+            verifyPinBtn.addEventListener('click', handlePinVerification);
+            
+            // Cancelar PIN
+            cancelPinBtn.addEventListener('click', function() {
+                pinForm.style.display = 'none';
+                mainForm.style.display = 'block';
+                clearLoginForm();
+            });
+            
             // Login con Enter
-            passwordInput.addEventListener('keypress', function(e) {
+            document.getElementById('password').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     handleLogin();
                 }
             });
             
-            async function handleLogin() {
-                const username = usernameInput.value.trim();
-                const password = passwordInput.value;
-                
-                if (!username || !password) {
-                    showMessage('error', 'Por favor completa todos los campos');
-                    return;
+            // PIN con Enter
+            document.getElementById('pinCode').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handlePinVerification();
                 }
-                
-                // Mostrar loading
-                document.getElementById('loading').style.display = 'block';
-                loginBtn.style.display = 'none';
-                
-                try {
-                    const result = await SecureAuth.login(username, password);
-                    
-                    // Ocultar loading
-                    document.getElementById('loading').style.display = 'none';
-                    loginBtn.style.display = 'flex';
-                    
-                    if (result.success) {
-                        showMessage('success', `¡Bienvenido ${result.user.name}!`);
-                        
-                        // Redirigir
-                        setTimeout(() => {
-                            if (result.user.user_type === 'admin') {
-                                window.location.href = 'admin.html';
-                            } else {
-                                window.location.href = 'dashboard.html';
-                            }
-                        }, 1000);
-                    } else {
-                        showMessage('error', result.error);
-                    }
-                } catch (error) {
-                    document.getElementById('loading').style.display = 'none';
-                    loginBtn.style.display = 'flex';
-                    showMessage('error', 'Error de conexión con el servidor');
-                }
-            }
-            
-            function showMessage(type, text) {
-                const messageBox = document.getElementById('messageBox');
-                if (!messageBox) return;
-                
-                messageBox.className = `message-box ${type}`;
-                messageBox.innerHTML = `
-                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
-                                      type === 'success' ? 'check-circle' : 
-                                      'info-circle'}"></i>
-                    ${text}
-                `;
-                messageBox.style.display = 'block';
-                
-                if (type !== 'error') {
-                    setTimeout(() => {
-                        messageBox.style.display = 'none';
-                    }, 5000);
-                }
-            }
-            
-            // Función para crear partículas
-            function createParticles() {
-                const particlesContainer = document.getElementById('particles');
-                if (!particlesContainer) return;
-                
-                const particleCount = 30;
-                
-                for (let i = 0; i < particleCount; i++) {
-                    const particle = document.createElement('div');
-                    particle.className = 'particle';
-                    
-                    const left = Math.random() * 100;
-                    const top = Math.random() * 100 + 100; // Empezar desde abajo
-                    const size = Math.random() * 2 + 1;
-                    const duration = Math.random() * 10 + 20;
-                    const delay = Math.random() * 5;
-                    
-                    particle.style.left = `${left}%`;
-                    particle.style.top = `${top}%`;
-                    particle.style.width = `${size}px`;
-                    particle.style.height = `${size}px`;
-                    particle.style.animationDuration = `${duration}s`;
-                    particle.style.animationDelay = `${delay}s`;
-                    
-                    particlesContainer.appendChild(particle);
-                }
-            }
+            });
         });
+        
+        async function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showMessage('error', 'Por favor completa todos los campos');
+                return;
+            }
+            
+            // Guardar credenciales temporalmente
+            tempUsername = username;
+            tempPassword = password;
+            
+            // Mostrar formulario de PIN
+            document.getElementById('mainForm').style.display = 'none';
+            document.getElementById('pinForm').style.display = 'block';
+            document.getElementById('pinCode').focus();
+        }
+        
+        async function handlePinVerification() {
+            const pinCode = document.getElementById('pinCode').value.trim();
+            
+            if (!pinCode || pinCode.length !== 4) {
+                showMessage('error', 'Por favor ingresa un PIN de 4 dígitos');
+                return;
+            }
+            
+            // Mostrar loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('verifyPinBtn').style.display = 'none';
+            
+            try {
+                // Verificar PIN (en este sistema simple, el PIN es 1234)
+                const MASTER_PIN = '1234'; // Mismo que en auth-simple.js
+                
+                if (pinCode !== MASTER_PIN) {
+                    throw new Error('PIN incorrecto. Usa: 1234');
+                }
+                
+                // PIN correcto, proceder con login
+                const result = await SecureAuth.login(tempUsername, tempPassword);
+                
+                // Ocultar loading
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('verifyPinBtn').style.display = 'flex';
+                
+                if (result.success) {
+                    showMessage('success', `¡Bienvenido ${result.user.name}!`);
+                    
+                    // Redirigir después de 1 segundo
+                    setTimeout(() => {
+                        if (result.user.user_type === 'admin') {
+                            window.location.href = 'admin.html';
+                        } else {
+                            window.location.href = 'dashboard.html';
+                        }
+                    }, 1000);
+                } else {
+                    showMessage('error', result.error);
+                    // Volver al formulario principal
+                    document.getElementById('pinForm').style.display = 'none';
+                    document.getElementById('mainForm').style.display = 'block';
+                    clearLoginForm();
+                }
+                
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('verifyPinBtn').style.display = 'flex';
+                showMessage('error', error.message);
+            }
+        }
+        
+        function clearLoginForm() {
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('pinCode').value = '';
+            tempUsername = '';
+            tempPassword = '';
+        }
+        
+        function showMessage(type, text) {
+            const messageBox = document.getElementById('messageBox');
+            if (!messageBox) return;
+            
+            messageBox.className = `message-box ${type}`;
+            messageBox.innerHTML = `
+                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
+                                  type === 'success' ? 'check-circle' : 
+                                  'info-circle'}"></i>
+                ${text}
+            `;
+            messageBox.style.display = 'block';
+            
+            if (type !== 'error') {
+                setTimeout(() => {
+                    messageBox.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Función para crear partículas (opcional)
+        function createParticles() {
+            // Tu código de partículas existente
+        }
     </script>
 </body>
 </html>
