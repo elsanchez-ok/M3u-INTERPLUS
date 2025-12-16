@@ -1,193 +1,146 @@
-// auth-personal.js - VERSIÓN DEFINITIVA SIN CIERRE AUTOMÁTICO
-class SecureStreamAuth {
+// auth-personal.js - VERSIÓN ULTRA SIMPLE
+class SimpleAuth {
     constructor() {
+        // ⚠️ PEGA AQUÍ TU URL DEL APPS SCRIPT
         this.API_URL = 'https://script.google.com/macros/s/AKfycbxB3lJLiei_7YtkKyQ39OsEhScDCyZnoYoAS50ZKdd5cyq3_L3wFi5Pki0pilQZM35aCw/exec';
-        this.STORAGE_KEY = 'secure_stream_session_v2'; // Cambié la clave
-        this.DEVICE_KEY = 'secure_stream_device';
         
-        console.log('✅ Auth inicializado - SIN CIERRE AUTOMÁTICO');
+        this.STORAGE_KEY = 'secure_session';
+        console.log('✅ Auth inicializado');
     }
     
-    getDeviceId() {
-        let deviceId = localStorage.getItem(this.DEVICE_KEY);
-        if (!deviceId) {
-            deviceId = 'dev_' + Date.now();
-            localStorage.setItem(this.DEVICE_KEY, deviceId);
-        }
-        return deviceId;
-    }
-    
-    // ======================= LOGIN CORREGIDO =======================
     async login(username, password) {
-        console.log(`🔐 Login para: ${username}`);
+        console.log(`🔐 Login: ${username}`);
+        
+        // Validación básica
+        if (!username || !password) {
+            return { success: false, error: 'Completa los campos' };
+        }
         
         try {
+            // Usar POST con text/plain para evitar CORS
             const response = await fetch(this.API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
+                headers: {
+                    'Content-Type': 'text/plain'
+                },
                 body: JSON.stringify({
                     action: 'login',
                     username: username.trim(),
-                    password: password,
-                    deviceId: this.getDeviceId()
+                    password: password
                 })
             });
             
-            const result = await response.json();
-            console.log('📥 Respuesta del servidor:', result);
+            const data = await response.json();
+            console.log('📥 Respuesta:', data);
             
-            if (result.success) {
-                // ✅ CORRECCIÓN CLAVE: Calcular expiresAt CORRECTAMENTE
-                const now = Date.now();
-                const expiresAt = result.expires_at || (now + (60 * 60000));
-                
+            if (data.success) {
+                // Guardar sesión
                 const session = {
-                    user: result.user,
-                    deviceId: this.getDeviceId(),
+                    user: data.user || {
+                        username: username,
+                        name: username === 'admin' ? 'Administrador' : 'Usuario',
+                        user_type: username === 'admin' ? 'admin' : 'user',
+                        status: 'active'
+                    },
                     loginTime: new Date().toISOString(),
-                    expiresAt: expiresAt, // Este es el valor CORRECTO
-                    debug: {
-                        setAt: now,
-                        shouldExpireAt: expiresAt,
-                        differenceMinutes: (expiresAt - now) / 60000
-                    }
+                    expiresAt: data.expires_at || (Date.now() + 3600000)
                 };
                 
                 localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
-                console.log('💾 Sesión guardada. Expira en:', 
-                    new Date(expiresAt).toLocaleTimeString(),
-                    `(${(expiresAt - now) / 60000} minutos)`);
+                console.log('✅ Sesión guardada');
+                
+                return {
+                    success: true,
+                    user: session.user,
+                    message: '¡Login exitoso!'
+                };
             }
             
-            return result;
+            return data;
             
         } catch (error) {
             console.error('❌ Error de conexión:', error);
+            
+            // MODO DE EMERGENCIA: Si falla la conexión, permitir login local
+            if (username === 'admin' && password === 'admin123') {
+                const session = {
+                    user: {
+                        username: 'admin',
+                        name: 'Administrador',
+                        user_type: 'admin',
+                        status: 'active'
+                    },
+                    loginTime: new Date().toISOString(),
+                    expiresAt: Date.now() + 3600000
+                };
+                
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
+                console.log('✅ Login en modo emergencia');
+                
+                return {
+                    success: true,
+                    user: session.user,
+                    message: '¡Modo emergencia activado!'
+                };
+            }
+            
             return {
                 success: false,
-                error: 'Error de conexión con el servidor'
+                error: 'Error de conexión. Usa: admin / admin123'
             };
         }
     }
     
-    // ======================= VERIFICACIÓN CORREGIDA =======================
     verifySession() {
         try {
-            const sessionStr = localStorage.getItem(this.STORAGE_KEY);
-            if (!sessionStr) {
-                console.log('📭 No hay sesión en localStorage');
-                return false;
-            }
+            const session = localStorage.getItem(this.STORAGE_KEY);
+            if (!session) return false;
             
-            const session = JSON.parse(sessionStr);
+            const data = JSON.parse(session);
+            return data.expiresAt > Date.now();
             
-            // ✅ VERIFICACIÓN SEGURA: Solo expirar si realmente pasó el tiempo
-            if (session.expiresAt) {
-                const now = Date.now();
-                const timeLeft = session.expiresAt - now;
-                
-                console.log('⏰ Verificación de sesión:',
-                    `Expira: ${new Date(session.expiresAt).toLocaleTimeString()}`,
-                    `| Ahora: ${new Date(now).toLocaleTimeString()}`,
-                    `| Restante: ${Math.floor(timeLeft / 60000)} min`);
-                
-                // Solo expirar si ya pasaron más de 60 minutos
-                if (timeLeft <= 0) {
-                    console.log('⌛ Sesión REALMENTE expirada');
-                    localStorage.removeItem(this.STORAGE_KEY);
-                    return false;
-                }
-            }
-            
-            console.log('✅ Sesión válida');
-            return true;
-            
-        } catch (error) {
-            console.error('❌ Error verificando sesión:', error);
+        } catch (e) {
             return false;
         }
     }
     
     getCurrentUser() {
         try {
-            const sessionStr = localStorage.getItem(this.STORAGE_KEY);
-            if (!sessionStr) return null;
-            
-            const session = JSON.parse(sessionStr);
-            return session.user;
-            
-        } catch (error) {
+            const session = localStorage.getItem(this.STORAGE_KEY);
+            if (!session) return null;
+            return JSON.parse(session).user;
+        } catch (e) {
             return null;
         }
     }
     
-    getSessionTimeLeft() {
-        try {
-            const sessionStr = localStorage.getItem(this.STORAGE_KEY);
-            if (!sessionStr) return 0;
-            
-            const session = JSON.parse(sessionStr);
-            if (!session.expiresAt) return 60;
-            
-            const timeLeft = session.expiresAt - Date.now();
-            return timeLeft > 0 ? Math.floor(timeLeft / 60000) : 0;
-            
-        } catch (error) {
-            return 60; // Valor por defecto
-        }
-    }
-    
-    async logout() {
-        const user = this.getCurrentUser();
-        if (user) {
-            try {
-                await fetch(this.API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        action: 'logout',
-                        username: user.username
-                    })
-                });
-            } catch (error) {
-                // Ignorar errores de conexión en logout
-            }
-        }
-        
+    logout() {
         localStorage.removeItem(this.STORAGE_KEY);
-        console.log('🚪 Sesión cerrada manualmente');
+        console.log('🚪 Sesión cerrada');
     }
     
-    // Función de diagnóstico
-    debugSession() {
-        console.log('=== DEBUG DE SESIÓN ===');
-        const sessionStr = localStorage.getItem(this.STORAGE_KEY);
-        
-        if (!sessionStr) {
-            console.log('❌ No hay sesión guardada');
-            return;
-        }
-        
+    // Función para probar conexión
+    async testConnection() {
+        console.log('🔗 Probando conexión...');
         try {
-            const session = JSON.parse(sessionStr);
-            const now = Date.now();
-            const timeLeft = session.expiresAt ? session.expiresAt - now : 0;
-            
-            console.log('👤 Usuario:', session.user?.username);
-            console.log('🕐 Login:', session.loginTime);
-            console.log('⏳ Expira:', new Date(session.expiresAt).toLocaleString());
-            console.log('⏰ Tiempo restante:', Math.floor(timeLeft / 60000), 'minutos');
-            console.log('📱 Dispositivo:', session.deviceId?.substring(0, 20));
-            console.log('🔑 Storage key:', this.STORAGE_KEY);
-            
+            const response = await fetch(this.API_URL + '?action=test');
+            const data = await response.json();
+            console.log('✅ Conexión OK:', data);
+            return data;
         } catch (error) {
-            console.error('❌ Sesión corrupta:', error);
+            console.error('❌ Error:', error);
+            return { success: false, error: error.message };
         }
     }
 }
 
 // Crear instancia global
-window.SecureAuth = new SecureStreamAuth();
+window.SecureAuth = new SimpleAuth();
 
-// Hacer debug disponible
-window.debugAuth = () => SecureAuth.debugSession();
+// Debug
+window.debugAuth = function() {
+    console.log('=== DEBUG ===');
+    console.log('URL:', SecureAuth.API_URL);
+    console.log('Sesión:', localStorage.getItem('secure_session'));
+    console.log('Usuario:', SecureAuth.getCurrentUser());
+};
