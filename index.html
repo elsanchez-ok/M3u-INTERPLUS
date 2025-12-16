@@ -5,8 +5,275 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureStream Pro | Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/login.css">
+    <style>
+        /* ESTILOS BÁSICOS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body.login-page {
+            background: linear-gradient(135deg, #0c2461, #1e3799);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #00b7ff, #0066ff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 36px;
+            color: white;
+        }
+        
+        .logo-section h1 {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .logo-section p {
+            color: #a0cfff;
+            font-size: 14px;
+        }
+        
+        /* MENSAJES */
+        .message-box {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .message-box.success {
+            background: rgba(46, 204, 113, 0.2);
+            border-left: 4px solid #2ecc71;
+            color: #2ecc71;
+        }
+        
+        .message-box.error {
+            background: rgba(231, 76, 60, 0.2);
+            border-left: 4px solid #e74c3c;
+            color: #e74c3c;
+        }
+        
+        .message-box.info {
+            background: rgba(52, 152, 219, 0.2);
+            border-left: 4px solid #3498db;
+            color: #3498db;
+        }
+        
+        .message-box.warning {
+            background: rgba(243, 156, 18, 0.2);
+            border-left: 4px solid #f39c12;
+            color: #f39c12;
+        }
+        
+        /* FORMULARIO */
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-label {
+            display: block;
+            color: #a0cfff;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-wrapper i:first-child {
+            position: absolute;
+            left: 15px;
+            color: #00b7ff;
+            font-size: 18px;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 15px 15px 15px 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: #00b7ff;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 2px rgba(0, 183, 255, 0.2);
+        }
+        
+        .login-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* BOTÓN */
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #00b7ff, #0066ff);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            background: linear-gradient(135deg, #00a3e6, #0052cc);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 183, 255, 0.4);
+        }
+        
+        .btn-login:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        /* LOADING */
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #00b7ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        .loading p {
+            color: #a0cfff;
+            font-size: 14px;
+        }
+        
+        /* INFORMACIÓN */
+        .user-info {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-info h3 {
+            color: white;
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-info ul {
+            list-style: none;
+        }
+        
+        .user-info li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #a0cfff;
+            font-size: 14px;
+        }
+        
+        .user-info li:last-child {
+            border-bottom: none;
+        }
+        
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #a0cfff;
+            font-size: 14px;
+        }
+        
+        /* ANIMACIONES */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* BOTÓN FORZAR LOGOUT */
+        .force-logout-btn {
+            background: linear-gradient(135deg, #ff4b4b, #ff0000);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .force-logout-btn:hover {
+            background: linear-gradient(135deg, #ff3333, #cc0000);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
 <body class="login-page">
     
@@ -37,7 +304,7 @@
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-user-circle"></i>
-                    <input type="text" id="username" class="login-input" placeholder="admin">
+                    <input type="text" id="username" class="login-input" placeholder="admin" autocomplete="username">
                 </div>
             </div>
             
@@ -47,7 +314,7 @@
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" class="login-input" placeholder="admin123">
+                    <input type="password" id="password" class="login-input" placeholder="admin123" autocomplete="current-password">
                 </div>
             </div>
             
@@ -56,7 +323,8 @@
                 <span>INICIAR SESIÓN</span>
             </button>
             
-            <div style="margin-top: 20px; padding: 15px; background: rgba(0, 183, 255, 0.1); border-radius: 10px;">
+            <!-- Información del sistema -->
+            <div class="user-info" style="margin-top: 20px;">
                 <h4 style="color: #00b7ff; margin-bottom: 10px; font-size: 14px;">
                     <i class="fas fa-info-circle"></i> ¿Cómo funciona?
                 </h4>
@@ -69,7 +337,7 @@
             </div>
         </div>
         
-        <!-- Información -->
+        <!-- Credenciales -->
         <div class="user-info">
             <h3><i class="fas fa-users"></i> Credenciales de Prueba</h3>
             <ul>
@@ -98,111 +366,186 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="js/auth-personal.js"></script>
+    <!-- TODO EL JAVASCRIPT EN UN SOLO ARCHIVO -->
     <script>
-        // Evitar múltiples redirecciones
-        let isRedirecting = false;
-        
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🔧 Sistema cargado');
-            
-            // DESACTIVAR VERIFICACIÓN AUTOMÁTICA PARA EVITAR BUCLE
-            // Solo verificar si hay sesión guardada, pero no redirigir automáticamente
-            const hasLocalSession = localStorage.getItem('secure_stream_session');
-            
-            if (hasLocalSession) {
-                console.log('📱 Sesión encontrada en localStorage');
-                // NO redirigir automáticamente - dejar que el usuario haga login
-            }
-            
-            // Configurar eventos del formulario
-            const loginBtn = document.getElementById('loginBtn');
-            const passwordInput = document.getElementById('password');
-            
-            loginBtn.addEventListener('click', handleLogin);
-            
-            passwordInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') handleLogin();
-            });
-        });
-        
-        async function handleLogin() {
-            if (isRedirecting) {
-                console.log('⚠️ Ya se está procesando un login');
-                return;
-            }
-            
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                showMessage('error', 'Completa todos los campos');
-                return;
-            }
-            
-            // Mostrar loading
-            showLoading('Verificando credenciales...');
-            isRedirecting = true;
-            
-            try {
-                const result = await SecureAuth.login(username, password);
+        // ============================================
+        // CLASE PRINCIPAL DE AUTENTICACIÓN
+        // ============================================
+        class SecureStreamAuth {
+            constructor() {
+                // ⚠️ REEMPLAZA ESTA URL CON LA TUYA
+                this.API_URL = 'https://script.google.com/macros/s/AKfycbxB3lJLiei_7YtkKyQ39OsEhScDCyZnoYoAS50ZKdd5cyq3_L3wFi5Pki0pilQZM35aCw/exec';
                 
-                hideLoading();
-                isRedirecting = false;
+                this.STORAGE_KEY = 'secure_stream_session';
+                this.DEVICE_KEY = 'secure_stream_device';
+                this.LAST_LOGIN_KEY = 'secure_stream_last_login';
                 
-                if (result.success) {
-                    showMessage('success', `✅ ¡Bienvenido ${result.user.name}!`);
+                console.log('✅ SecureStreamAuth inicializado');
+            }
+            
+            getDeviceId() {
+                let deviceId = localStorage.getItem(this.DEVICE_KEY);
+                if (!deviceId) {
+                    deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem(this.DEVICE_KEY, deviceId);
+                }
+                return deviceId;
+            }
+            
+            async sendRequest(action, data = {}) {
+                console.log(`📤 ${action}:`, { ...data, password: '***' });
+                
+                try {
+                    const response = await fetch(this.API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            action: action,
+                            deviceId: this.getDeviceId(),
+                            ...data
+                        })
+                    });
                     
-                    // Redirigir después de 1.5 segundos
-                    setTimeout(() => {
-                        if (result.user.user_type === 'admin') {
-                            console.log('➡️ Redirigiendo a admin.html');
-                            window.location.href = 'admin.html';
-                        } else {
-                            console.log('➡️ Redirigiendo a dashboard.html');
-                            window.location.href = 'dashboard.html';
-                        }
-                    }, 1500);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     
-                } else {
-                    let errorMsg = result.error;
+                    const result = await response.json();
+                    console.log(`📥 ${action} response:`, result);
+                    return result;
                     
-                    if (result.time_left) {
-                        errorMsg += ` (${result.time_left} minutos restantes)`;
-                        
-                        // Opción para forzar cierre si es admin
-                        if (username === 'admin') {
-                            errorMsg += `<br><br>
-                                <button onclick="forceLogout('${username}')" class="force-logout-btn">
-                                    <i class="fas fa-sign-out-alt"></i> Forzar cierre de sesión
-                                </button>`;
-                        }
-                    }
+                } catch (error) {
+                    console.error(`❌ ${action} error:`, error);
+                    return {
+                        success: false,
+                        error: 'Error de conexión. Revisa tu internet.'
+                    };
+                }
+            }
+            
+            async login(username, password) {
+                console.log(`🔐 Login para: ${username}`);
+                
+                // Guardar intento de login
+                localStorage.setItem(this.LAST_LOGIN_KEY, Date.now().toString());
+                
+                const result = await this.sendRequest('login', {
+                    username: username.trim(),
+                    password: password
+                });
+                
+                if (result.success && result.user) {
+                    const session = {
+                        user: result.user,
+                        deviceId: this.getDeviceId(),
+                        loginTime: new Date().toISOString(),
+                        expiresAt: result.expires_at || (Date.now() + 3600000),
+                        // Guardar hash para verificar integridad
+                        hash: btoa(username + ':' + Date.now())
+                    };
                     
-                    showMessage('error', errorMsg);
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
+                    console.log('✅ Sesión guardada localmente');
                 }
                 
-            } catch (error) {
-                hideLoading();
-                isRedirecting = false;
-                showMessage('error', 'Error de conexión: ' + error.message);
-                console.error('Login error:', error);
+                return result;
+            }
+            
+            // VERIFICAR SESIÓN LOCAL (SIN LLAMAR AL SERVIDOR)
+            verifyLocalSession() {
+                try {
+                    const sessionStr = localStorage.getItem(this.STORAGE_KEY);
+                    if (!sessionStr) {
+                        console.log('📭 No hay sesión local');
+                        return false;
+                    }
+                    
+                    const session = JSON.parse(sessionStr);
+                    
+                    // Verificar expiración LOCAL
+                    const now = Date.now();
+                    if (session.expiresAt && session.expiresAt < now) {
+                        console.log('⌛ Sesión local expirada');
+                        this.clearSession();
+                        return false;
+                    }
+                    
+                    // Verificar que tenga datos básicos
+                    if (!session.user || !session.user.username) {
+                        console.log('⚠️ Sesión local corrupta');
+                        this.clearSession();
+                        return false;
+                    }
+                    
+                    console.log(`📱 Sesión local activa para: ${session.user.username}`);
+                    return true;
+                    
+                } catch (error) {
+                    console.error('❌ Error verificando sesión local:', error);
+                    this.clearSession();
+                    return false;
+                }
+            }
+            
+            // OBTENER USUARIO ACTUAL (solo de localStorage)
+            getCurrentUser() {
+                try {
+                    const sessionStr = localStorage.getItem(this.STORAGE_KEY);
+                    if (!sessionStr) return null;
+                    
+                    const session = JSON.parse(sessionStr);
+                    return session.user;
+                    
+                } catch (error) {
+                    return null;
+                }
+            }
+            
+            // LIMPIAR SESIÓN
+            clearSession() {
+                localStorage.removeItem(this.STORAGE_KEY);
+                console.log('🧹 Sesión local limpiada');
+            }
+            
+            // CERRAR SESIÓN (opcional)
+            async logout() {
+                const user = this.getCurrentUser();
+                if (user) {
+                    await this.sendRequest('logout', { username: user.username });
+                }
+                this.clearSession();
+            }
+            
+            // FORZAR CIERRE
+            async forceLogout(username) {
+                return await this.sendRequest('force_logout', { username: username });
+            }
+            
+            // PROBAR CONEXIÓN
+            async testConnection() {
+                return await this.sendRequest('test');
             }
         }
         
-        async function forceLogout(username) {
-            if (confirm(`¿Forzar cierre de sesión para ${username}?`)) {
-                const result = await SecureAuth.forceLogout(username);
-                if (result.success) {
-                    showMessage('success', result.message);
-                    setTimeout(() => {
-                        document.getElementById('username').value = username;
-                        document.getElementById('password').value = '';
-                    }, 1000);
-                } else {
-                    showMessage('error', result.error);
-                }
+        // ============================================
+        // VARIABLES GLOBALES Y CONFIGURACIÓN
+        // ============================================
+        const SecureAuth = new SecureStreamAuth();
+        let isProcessing = false;
+        let loginAttempts = 0;
+        const MAX_LOGIN_ATTEMPTS = 3;
+        
+        // ============================================
+        // FUNCIONES DE INTERFAZ
+        // ============================================
+        function showMessage(type, text, duration = 5000) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.className = `message-box ${type}`;
+            messageBox.innerHTML = text;
+            messageBox.style.display = 'block';
+            
+            if (duration > 0 && type !== 'error') {
+                setTimeout(() => {
+                    messageBox.style.display = 'none';
+                }, duration);
             }
         }
         
@@ -217,60 +560,241 @@
             document.getElementById('loginBtn').disabled = false;
         }
         
-        function showMessage(type, text) {
-            const messageBox = document.getElementById('messageBox');
-            messageBox.className = `message-box ${type}`;
-            messageBox.innerHTML = text;
-            messageBox.style.display = 'block';
-            
-            if (type !== 'error') {
-                setTimeout(() => {
-                    messageBox.style.display = 'none';
-                }, 5000);
+        function forceLogout(username) {
+            if (confirm(`¿Forzar cierre de sesión para ${username}?\nEsto cerrará la sesión en todos los dispositivos.`)) {
+                showLoading('Forzando cierre de sesión...');
+                
+                SecureAuth.forceLogout(username)
+                    .then(result => {
+                        hideLoading();
+                        if (result.success) {
+                            showMessage('success', result.message + ' Ahora puedes intentar login nuevamente.');
+                            // Limpiar campos
+                            document.getElementById('password').value = '';
+                        } else {
+                            showMessage('error', 'Error: ' + result.error);
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        showMessage('error', 'Error de conexión');
+                    });
             }
         }
-
-        // Función para probar conexión - CORREGIDA
-        async function testConnection() {
-            console.log('🔗 Probando conexión...');
+        
+        // ============================================
+        // FUNCIÓN PRINCIPAL DE LOGIN
+        // ============================================
+        async function handleLogin() {
+            if (isProcessing) {
+                console.log('⚠️ Ya hay un login en proceso');
+                return;
+            }
+            
+            // Limitar intentos
+            loginAttempts++;
+            if (loginAttempts > MAX_LOGIN_ATTEMPTS) {
+                showMessage('error', 'Demasiados intentos. Espera 1 minuto.');
+                document.getElementById('loginBtn').disabled = true;
+                setTimeout(() => {
+                    loginAttempts = 0;
+                    document.getElementById('loginBtn').disabled = false;
+                }, 60000);
+                return;
+            }
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showMessage('error', 'Completa todos los campos');
+                return;
+            }
+            
+            isProcessing = true;
+            showLoading('Verificando credenciales...');
             
             try {
-                // Usar la URL correcta
-                const response = await fetch(SecureAuth.API_URL + '?action=test');
-                const data = await response.json();
-                console.log('✅ Conexión OK:', data);
-                return true;
+                const result = await SecureAuth.login(username, password);
+                
+                hideLoading();
+                isProcessing = false;
+                
+                if (result.success) {
+                    showMessage('success', `✅ ¡Bienvenido ${result.user.name}! Redirigiendo...`);
+                    
+                    // Resetear contador de intentos
+                    loginAttempts = 0;
+                    
+                    // ESPERAR 2 SEGUNDOS ANTES DE REDIRIGIR
+                    setTimeout(() => {
+                        console.log(`➡️ Redirigiendo a: ${result.user.user_type === 'admin' ? 'admin' : 'dashboard'}`);
+                        
+                        if (result.user.user_type === 'admin') {
+                            window.location.href = 'admin.html';
+                        } else {
+                            window.location.href = 'dashboard.html';
+                        }
+                    }, 2000);
+                    
+                } else {
+                    let errorMsg = result.error;
+                    
+                    // Mostrar tiempo restante si hay sesión activa
+                    if (result.time_left) {
+                        errorMsg += ` (${result.time_left} minutos restantes)`;
+                        
+                        // Mostrar botón para forzar cierre si es admin
+                        if (username === 'admin') {
+                            errorMsg += `<br><br>
+                                <button onclick="forceLogout('${username}')" class="force-logout-btn">
+                                    <i class="fas fa-sign-out-alt"></i> Forzar cierre de sesión
+                                </button>`;
+                        }
+                    }
+                    
+                    showMessage('error', errorMsg, 0); // No auto-ocultar errores
+                    
+                    // Limpiar contraseña en error
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+                
             } catch (error) {
-                console.error('❌ Error de conexión:', error);
-                return false;
+                hideLoading();
+                isProcessing = false;
+                showMessage('error', '❌ Error inesperado: ' + error.message);
+                console.error('Login error:', error);
             }
         }
         
-        // Función para debug
-        window.debugSystem = function() {
-            console.log('=== DEBUG ===');
-            console.log('URL API:', SecureAuth.API_URL);
-            console.log('Dispositivo:', SecureAuth.getDeviceId());
-            console.log('Sesión:', localStorage.getItem('secure_stream_session'));
-            console.log('isRedirecting:', isRedirecting);
-        };
-    </script>
-    
-    <style>
-        .force-logout-btn {
-            background: #ff4b4b;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 14px;
+        // ============================================
+        // INICIALIZACIÓN DE LA PÁGINA
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Sistema SecureStream cargado');
+            
+            // 1. VERIFICAR SI HAY REDIRECCIÓN PENDIENTE
+            const pendingRedirect = sessionStorage.getItem('pending_redirect');
+            if (pendingRedirect) {
+                console.log('🔄 Redirección pendiente detectada');
+                sessionStorage.removeItem('pending_redirect');
+                
+                // Pequeño delay para evitar bucles
+                setTimeout(() => {
+                    window.location.href = pendingRedirect;
+                }, 100);
+                return;
+            }
+            
+            // 2. VERIFICAR SESIÓN LOCAL (SOLO PARA MOSTRAR INFO)
+            const hasLocalSession = SecureAuth.verifyLocalSession();
+            const currentUser = SecureAuth.getCurrentUser();
+            
+            if (hasLocalSession && currentUser) {
+                console.log(`📱 Sesión local encontrada: ${currentUser.username}`);
+                // MOSTRAR INFO PERO NO REDIRIGIR AUTOMÁTICAMENTE
+                document.getElementById('username').value = currentUser.username;
+                showMessage('info', 
+                    `👋 Hola ${currentUser.name}. Ya tienes una sesión local.<br>
+                     Puedes hacer login para actualizarla o <a href="#" onclick="clearLocalSession()" style="color:#00b7ff;">cerrar sesión</a>.`,
+                    10000
+                );
+            } else {
+                console.log('👤 No hay sesión activa, mostrando formulario normal');
+            }
+            
+            // 3. CONFIGURAR EVENTOS
+            const loginBtn = document.getElementById('loginBtn');
+            const passwordInput = document.getElementById('password');
+            
+            loginBtn.addEventListener('click', handleLogin);
+            
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') handleLogin();
+            });
+            
+            // 4. PROBAR CONEXIÓN (OPCIONAL)
+            setTimeout(() => {
+                testConnection();
+            }, 1000);
+            
+            // 5. ENFOCAR CAMPO DE USUARIO
+            document.getElementById('username').focus();
+        });
+        
+        // ============================================
+        // FUNCIONES ADICIONALES
+        // ============================================
+        async function testConnection() {
+            console.log('🔗 Probando conexión al servidor...');
+            
+            try {
+                const response = await fetch(SecureAuth.API_URL + '?action=test', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ Servidor conectado:', data.message || 'OK');
+                } else {
+                    console.warn('⚠️ Servidor respondió con error:', response.status);
+                }
+            } catch (error) {
+                console.warn('🌐 Servidor offline o sin conexión');
+            }
         }
         
-        .force-logout-btn:hover {
-            background: #ff3333;
+        function clearLocalSession() {
+            if (confirm('¿Cerrar sesión local? Esto no afecta al servidor.')) {
+                SecureAuth.clearSession();
+                showMessage('success', '✅ Sesión local cerrada. Ahora puedes iniciar sesión nuevamente.');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                setTimeout(() => location.reload(), 1500);
+            }
+            return false;
         }
-    </style>
+        
+        function debugSystem() {
+            console.log('=== DEBUG ===');
+            console.log('API URL:', SecureAuth.API_URL);
+            console.log('Device ID:', SecureAuth.getDeviceId());
+            console.log('Local Session:', localStorage.getItem('secure_stream_session'));
+            console.log('Login Attempts:', loginAttempts);
+            console.log('Is Processing:', isProcessing);
+            
+            // Mostrar en pantalla
+            const session = JSON.parse(localStorage.getItem('secure_stream_session') || 'null');
+            const debugInfo = `
+                <strong>DEBUG INFO:</strong><br>
+                - API: ${SecureAuth.API_URL.substring(0, 50)}...<br>
+                - Dispositivo: ${SecureAuth.getDeviceId().substring(0, 20)}...<br>
+                - Sesión local: ${session ? 'Sí (' + session.user?.username + ')' : 'No'}<br>
+                - Intentos login: ${loginAttempts}<br>
+                <button onclick="clearAllData()" style="background:#ff4444;color:white;border:none;padding:5px 10px;border-radius:5px;margin-top:10px;">
+                    Limpiar Todo
+                </button>
+            `;
+            
+            showMessage('info', debugInfo, 10000);
+        }
+        
+        function clearAllData() {
+            if (confirm('¿LIMPIAR TODOS LOS DATOS LOCALES?\nEsto cerrará sesión y reiniciará todo.')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                showMessage('success', '✅ Todos los datos limpiados. Recargando...');
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+        
+        // Hacer funciones disponibles globalmente
+        window.forceLogout = forceLogout;
+        window.debugSystem = debugSystem;
+        window.clearLocalSession = clearLocalSession;
+        window.clearAllData = clearAllData;
+    </script>
 </body>
 </html>
