@@ -1,27 +1,38 @@
-// auth-system.js - Sistema de autenticación profesional para GitHub Pages
+// auth-system.js - Versión SIMPLIFICADA para GitHub Pages
 class SecureStreamAuth {
     constructor() {
+        // Configuración básica
         this.config = {
             STORAGE_KEY: 'secure_stream_auth',
             DEVICE_KEY: 'secure_stream_device',
-            TOKEN_KEY: 'secure_stream_token',
             SESSIONS_KEY: 'active_sessions'
         };
         
-        // Base de datos local para demo
+        // Base de datos LOCAL (en el navegador del usuario)
+        // ¡CAMBIA ESTAS CONTRASEÑAS!
         this.localDB = {
             users: [
                 {
                     id: 1,
                     username: 'admin',
-                    password: 'admin123',
+                    password: 'admin123', // Cambia esto
                     name: 'Administrador',
                     email: 'admin@stream.com',
                     user_type: 'admin',
                     status: 'active',
                     max_devices: 1,
-                    current_device: null,
-                    last_login: null
+                    current_device: null
+                },
+                {
+                    id: 2,
+                    username: 'usuario',
+                    password: 'user123', // Cambia esto
+                    name: 'Usuario Normal',
+                    email: 'usuario@stream.com',
+                    user_type: 'user',
+                    status: 'active',
+                    max_devices: 1,
+                    current_device: null
                 }
             ],
             streams: [
@@ -35,26 +46,21 @@ class SecureStreamAuth {
         };
     }
 
-    // Generar ID de dispositivo único
+    // Generar ID único para el dispositivo
     generateDeviceId() {
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substring(2, 15);
-        return `device_${timestamp}_${random}`;
+        return 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 
-    // Obtener o crear ID de dispositivo
     getDeviceId() {
         let deviceId = localStorage.getItem(this.config.DEVICE_KEY);
-        
         if (!deviceId) {
             deviceId = this.generateDeviceId();
             localStorage.setItem(this.config.DEVICE_KEY, deviceId);
         }
-        
         return deviceId;
     }
 
-    // Verificar si usuario ya tiene sesión activa
+    // Verificar si ya hay sesión activa
     checkExistingSession(username, currentDeviceId) {
         const sessions = JSON.parse(localStorage.getItem(this.config.SESSIONS_KEY) || '{}');
         const userSession = sessions[username];
@@ -69,40 +75,41 @@ class SecureStreamAuth {
         return { hasActiveSession: false };
     }
 
-    // Iniciar sesión
+    // INICIAR SESIÓN (versión local)
     async login(username, password) {
         try {
             const deviceId = this.getDeviceId();
             
-            // Verificar sesión existente
+            // 1. Verificar si ya está logeado en otro dispositivo
             const existingSession = this.checkExistingSession(username, deviceId);
             if (existingSession.hasActiveSession) {
-                throw new Error('Sesión activa en otro dispositivo. Cierra sesión primero.');
+                throw new Error('⚠️ Ya tienes una sesión activa en otro dispositivo. Cierra sesión primero.');
             }
             
-            // Buscar usuario
+            // 2. Buscar usuario en la base LOCAL
             const user = this.localDB.users.find(u => 
                 u.username === username && u.password === password
             );
             
             if (!user) {
-                throw new Error('Usuario o contraseña incorrectos');
+                throw new Error('❌ Usuario o contraseña incorrectos');
             }
             
+            // 3. Verificar que la cuenta esté activa
             if (user.status !== 'active') {
-                throw new Error('Cuenta desactivada');
+                throw new Error('❌ Esta cuenta está desactivada');
             }
             
-            // Verificar dispositivo
+            // 4. Verificar dispositivo (solo 1 sesión)
             if (user.current_device && user.current_device !== deviceId) {
-                throw new Error('Solo puedes tener una sesión activa a la vez');
+                throw new Error('❌ Solo puedes tener UNA sesión activa a la vez');
             }
             
-            // Actualizar información
+            // 5. Actualizar información del usuario
             user.current_device = deviceId;
             user.last_login = new Date().toISOString();
             
-            // Crear sesión
+            // 6. Crear la sesión
             const sessionData = {
                 user: {
                     id: user.id,
@@ -115,14 +122,13 @@ class SecureStreamAuth {
                 },
                 deviceId: deviceId,
                 loginTime: new Date().toISOString(),
-                token: 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+                token: 'local_token_' + Date.now()
             };
             
-            // Guardar datos
+            // 7. Guardar en el navegador del usuario
             localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(sessionData));
-            localStorage.setItem(this.config.TOKEN_KEY, sessionData.token);
             
-            // Registrar sesión activa
+            // 8. Registrar sesión activa
             const activeSessions = JSON.parse(localStorage.getItem(this.config.SESSIONS_KEY) || '{}');
             activeSessions[username] = {
                 deviceId: deviceId,
@@ -133,12 +139,11 @@ class SecureStreamAuth {
             return {
                 success: true,
                 user: sessionData.user,
-                token: sessionData.token,
                 deviceId: deviceId
             };
             
         } catch (error) {
-            console.error('Login Error:', error);
+            console.error('Error en login:', error.message);
             return {
                 success: false,
                 error: error.message
@@ -146,7 +151,7 @@ class SecureStreamAuth {
         }
     }
 
-    // Verificar sesión
+    // Verificar si hay sesión activa
     async verifySession() {
         try {
             const sessionData = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
@@ -156,18 +161,18 @@ class SecureStreamAuth {
                 return false;
             }
             
-            // Verificar dispositivo
+            // Verificar que el dispositivo sea el mismo
             if (sessionData.deviceId !== deviceId) {
-                this.logout();
+                await this.logout();
                 return false;
             }
             
-            // Verificar sesión activa
+            // Verificar sesiones activas
             const activeSessions = JSON.parse(localStorage.getItem(this.config.SESSIONS_KEY) || '{}');
             const userSession = activeSessions[sessionData.user.username];
             
             if (!userSession || userSession.deviceId !== deviceId) {
-                this.logout();
+                await this.logout();
                 return false;
             }
             
@@ -184,7 +189,7 @@ class SecureStreamAuth {
         return sessionData ? sessionData.user : null;
     }
 
-    // Obtener stream
+    // Obtener el stream
     async getCurrentStream() {
         try {
             const stream = this.localDB.streams.find(s => s.is_active);
@@ -194,27 +199,58 @@ class SecureStreamAuth {
         }
     }
 
-    // Cerrar sesión
+    // CERRAR SESIÓN
     async logout() {
         try {
             const user = this.getCurrentUser();
-            const deviceId = localStorage.getItem(this.config.DEVICE_KEY);
             
             if (user) {
-                // Remover de sesiones activas
+                // Eliminar de sesiones activas
                 const activeSessions = JSON.parse(localStorage.getItem(this.config.SESSIONS_KEY) || '{}');
                 delete activeSessions[user.username];
                 localStorage.setItem(this.config.SESSIONS_KEY, JSON.stringify(activeSessions));
             }
         } catch (error) {
-            console.error('Logout Error:', error);
+            console.error('Error en logout:', error);
         } finally {
-            // Limpiar datos locales
+            // Limpiar todo
             localStorage.removeItem(this.config.STORAGE_KEY);
-            localStorage.removeItem(this.config.TOKEN_KEY);
+        }
+    }
+
+    // OPCIONAL: Agregar más usuarios (para admin)
+    async createUser(userData) {
+        try {
+            // Verificar que el usuario no exista
+            const existingUser = this.localDB.users.find(u => u.username === userData.username);
+            if (existingUser) {
+                throw new Error('El usuario ya existe');
+            }
+            
+            const newUser = {
+                id: this.localDB.users.length + 1,
+                ...userData,
+                status: 'active',
+                current_device: null,
+                max_devices: 1
+            };
+            
+            this.localDB.users.push(newUser);
+            return { success: true, user: newUser };
+            
+        } catch (error) {
+            return { success: false, error: error.message };
         }
     }
 }
 
-// Instancia global
+// Crear la instancia global
 const SecureAuth = new SecureStreamAuth();
+
+// Función para DEBUG (opcional)
+function debugAuth() {
+    console.log('=== DEBUG SISTEMA ===');
+    console.log('Dispositivo:', localStorage.getItem('secure_stream_device'));
+    console.log('Sesión:', localStorage.getItem('secure_stream_auth'));
+    console.log('Sesiones activas:', localStorage.getItem('active_sessions'));
+}
