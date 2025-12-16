@@ -151,6 +151,45 @@
             
             // Actualizar UI con datos del usuario
             updateUserInfo(user);
+            function updateSessionTimer() {
+    const timeElement = document.getElementById('infoTimeLeft');
+    if (!timeElement) return;
+    
+    const updateTime = () => {
+        const timeLeft = SecureAuth.getSessionTimeLeft();
+        
+        if (timeLeft <= 0) {
+            timeElement.textContent = 'Sesión expirada';
+            timeElement.style.color = '#ff4b4b';
+            
+            // Mostrar mensaje y redirigir
+            showMessage('error', '❌ Sesión expirada. Redirigiendo...');
+            setTimeout(() => {
+                SecureAuth.logout();
+                window.location.href = 'index.html';
+            }, 3000);
+            return;
+        }
+        
+        // Mostrar tiempo restante
+        timeElement.textContent = `${timeLeft} minutos`;
+        
+        // Cambiar color según tiempo
+        if (timeLeft < 5) {
+            timeElement.style.color = '#ff4b4b';
+        } else if (timeLeft < 15) {
+            timeElement.style.color = '#ffaa00';
+        } else {
+            timeElement.style.color = '#00ff88';
+        }
+        
+        // Programar siguiente actualización
+        setTimeout(updateTime, 60000); // Actualizar cada minuto
+    };
+    
+    // Iniciar el contador
+    updateTime();
+}
             
             // Configurar eventos de botones
             setupEventListeners();
