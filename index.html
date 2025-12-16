@@ -10,7 +10,6 @@
 </head>
 <body class="login-page">
     
-    <!-- Contenedor de login -->
     <div class="login-container">
         <!-- Logo -->
         <div class="logo-section">
@@ -18,7 +17,7 @@
                 <i class="fas fa-shield-alt"></i>
             </div>
             <h1>SecureStream Pro</h1>
-            <p>GitHub Pages Edition</p>
+            <p>Sistema de Sesión Única</p>
         </div>
         
         <!-- Mensajes -->
@@ -27,18 +26,18 @@
         <!-- Loading -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Verificando credenciales...</p>
+            <p id="loadingText">Verificando...</p>
         </div>
         
-        <!-- Formulario PRINCIPAL -->
-        <div id="mainForm">
+        <!-- ÚNICO formulario -->
+        <div id="loginForm">
             <div class="input-group">
                 <label for="username" class="input-label">
                     <i class="fas fa-user"></i> Usuario
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-user-circle"></i>
-                    <input type="text" id="username" class="login-input" placeholder="Ingresa tu usuario">
+                    <input type="text" id="username" class="login-input" placeholder="admin" value="admin">
                 </div>
             </div>
             
@@ -48,7 +47,7 @@
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" class="login-input" placeholder="Ingresa tu contraseña">
+                    <input type="password" id="password" class="login-input" placeholder="admin123" value="admin123">
                 </div>
             </div>
             
@@ -56,81 +55,62 @@
                 <i class="fas fa-sign-in-alt"></i>
                 <span>INICIAR SESIÓN</span>
             </button>
-        </div>
-        
-        <!-- Formulario de PIN (oculto inicialmente) -->
-        <div id="pinForm" style="display: none;">
-            <div class="input-group">
-                <label class="input-label">
-                    <i class="fas fa-lock"></i> Verificación de Seguridad
-                </label>
-                <p style="color: #a0cfff; text-align: center; margin-bottom: 20px; font-size: 14px;">
-                    Ingresa el PIN de seguridad para continuar.<br>
-                    <small style="color: #ffaa00;">Mismo PIN en todos los dispositivos</small>
-                </p>
-            </div>
             
-            <div class="input-group">
-                <label for="pinCode" class="input-label">
-                    <i class="fas fa-keyboard"></i> PIN de 4 dígitos
-                </label>
-                <div class="input-wrapper">
-                    <i class="fas fa-hashtag"></i>
-                    <input type="password" id="pinCode" class="login-input" placeholder="1234" maxlength="4" inputmode="numeric">
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-warning" id="cancelPinBtn" style="flex: 1;">
-                    <i class="fas fa-times"></i>
-                    Cancelar
-                </button>
-                <button class="btn-login" id="verifyPinBtn" style="flex: 1;">
-                    <i class="fas fa-check"></i>
-                    Verificar
-                </button>
+            <div style="margin-top: 20px; padding: 15px; background: rgba(0, 183, 255, 0.1); border-radius: 10px;">
+                <h4 style="color: #00b7ff; margin-bottom: 10px; font-size: 14px;">
+                    <i class="fas fa-info-circle"></i> ¿Cómo funciona?
+                </h4>
+                <ul style="color: #a0cfff; font-size: 12px; padding-left: 20px;">
+                    <li>Solo <strong>1 dispositivo</strong> por usuario</li>
+                    <li>Sesión de <strong>60 minutos</strong></li>
+                    <li>Si intentas en otro dispositivo: <strong>BLOQUEADO</strong></li>
+                    <li>Admin puede forzar cierre de sesiones</li>
+                </ul>
             </div>
         </div>
         
-        <!-- Información del sistema -->
+        <!-- Información -->
         <div class="user-info">
-            <h3><i class="fas fa-info-circle"></i> Información del Sistema</h3>
+            <h3><i class="fas fa-users"></i> Credenciales de Prueba</h3>
             <ul>
                 <li>
-                    <span>Credenciales:</span>
+                    <span>Administrador:</span>
                     <span style="color: #00b7ff;">admin / admin123</span>
                 </li>
                 <li>
-                    <span>PIN por defecto:</span>
-                    <span style="color: #00ff88;">1234</span>
+                    <span>Usuario normal:</span>
+                    <span style="color: #00ff88;">usuario / user123</span>
                 </li>
                 <li>
-                    <span>Sesión:</span>
-                    <span style="color: #ffaa00;">60 minutos</span>
+                    <span>Duración:</span>
+                    <span style="color: #ffaa00;">60 minutos por sesión</span>
                 </li>
             </ul>
         </div>
         
         <!-- Footer -->
         <div class="footer">
-            <p>Sistema seguro de streaming | v3.0</p>
-            <p style="margin-top: 5px;">Hosteado en GitHub Pages</p>
+            <p>SecureStream Pro v3.0 | Sesión Única</p>
+            <p style="margin-top: 5px; font-size: 0.9rem;">
+                <i class="fas fa-database"></i>
+                Google Sheets + GitHub Pages
+            </p>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="js/auth-simple.js"></script>
+    <script src="js/auth-no-pin.js"></script>
     <script>
-        // Variables globales para almacenar credenciales temporalmente
-        let tempUsername = '';
-        let tempPassword = '';
-        
         document.addEventListener('DOMContentLoaded', async function() {
-            // Verificar si ya está autenticado
+            console.log('🔧 Sistema cargado');
+            
+            // Verificar sesión existente
             const isAuthenticated = await SecureAuth.verifySession();
             
             if (isAuthenticated) {
                 const user = SecureAuth.getCurrentUser();
+                console.log('✅ Sesión activa:', user?.username);
+                
                 if (user && user.user_type === 'admin') {
                     window.location.href = 'admin.html';
                 } else if (user) {
@@ -138,38 +118,14 @@
                 }
             }
             
-            // Configurar botones
+            // Configurar eventos
             const loginBtn = document.getElementById('loginBtn');
-            const verifyPinBtn = document.getElementById('verifyPinBtn');
-            const cancelPinBtn = document.getElementById('cancelPinBtn');
-            const mainForm = document.getElementById('mainForm');
-            const pinForm = document.getElementById('pinForm');
+            const passwordInput = document.getElementById('password');
             
-            // Login normal
             loginBtn.addEventListener('click', handleLogin);
             
-            // Verificar PIN
-            verifyPinBtn.addEventListener('click', handlePinVerification);
-            
-            // Cancelar PIN
-            cancelPinBtn.addEventListener('click', function() {
-                pinForm.style.display = 'none';
-                mainForm.style.display = 'block';
-                clearLoginForm();
-            });
-            
-            // Login con Enter
-            document.getElementById('password').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handleLogin();
-                }
-            });
-            
-            // PIN con Enter
-            document.getElementById('pinCode').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handlePinVerification();
-                }
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') handleLogin();
             });
         });
         
@@ -178,49 +134,21 @@
             const password = document.getElementById('password').value;
             
             if (!username || !password) {
-                showMessage('error', 'Por favor completa todos los campos');
-                return;
-            }
-            
-            // Guardar credenciales temporalmente
-            tempUsername = username;
-            tempPassword = password;
-            
-            // Mostrar formulario de PIN
-            document.getElementById('mainForm').style.display = 'none';
-            document.getElementById('pinForm').style.display = 'block';
-            document.getElementById('pinCode').focus();
-        }
-        
-        async function handlePinVerification() {
-            const pinCode = document.getElementById('pinCode').value.trim();
-            
-            if (!pinCode || pinCode.length !== 4) {
-                showMessage('error', 'Por favor ingresa un PIN de 4 dígitos');
+                showMessage('error', 'Completa todos los campos');
                 return;
             }
             
             // Mostrar loading
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('verifyPinBtn').style.display = 'none';
+            showLoading('Verificando sesión única...');
             
             try {
-                // Verificar PIN (en este sistema simple, el PIN es 1234)
-                const MASTER_PIN = '1234'; // Mismo que en auth-simple.js
+                // Login directo (SIN PIN)
+                const result = await SecureAuth.login(username, password);
                 
-                if (pinCode !== MASTER_PIN) {
-                    throw new Error('PIN incorrecto. Usa: 1234');
-                }
-                
-                // PIN correcto, proceder con login
-                const result = await SecureAuth.login(tempUsername, tempPassword);
-                
-                // Ocultar loading
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('verifyPinBtn').style.display = 'flex';
+                hideLoading();
                 
                 if (result.success) {
-                    showMessage('success', `¡Bienvenido ${result.user.name}!`);
+                    showMessage('success', `✅ ¡Bienvenido ${result.user.name}!`);
                     
                     // Redirigir después de 1 segundo
                     setTimeout(() => {
@@ -230,40 +158,56 @@
                             window.location.href = 'dashboard.html';
                         }
                     }, 1000);
+                    
                 } else {
-                    showMessage('error', result.error);
-                    // Volver al formulario principal
-                    document.getElementById('pinForm').style.display = 'none';
-                    document.getElementById('mainForm').style.display = 'block';
-                    clearLoginForm();
+                    // Mostrar error específico
+                    let errorMsg = result.error;
+                    
+                    if (result.time_left) {
+                        errorMsg += ` (${result.time_left} minutos restantes)`;
+                        
+                        // Mostrar opción para forzar cierre si es admin
+                        if (username === 'admin') {
+                            errorMsg += `<br><br><button onclick="forceLogout('${username}')" 
+                                style="background: #ff4b4b; color: white; border: none; padding: 8px 15px; 
+                                border-radius: 5px; cursor: pointer; margin-top: 10px;">
+                                <i class="fas fa-sign-out-alt"></i> Forzar cierre de sesión
+                            </button>`;
+                        }
+                    }
+                    
+                    showMessage('error', errorMsg);
                 }
                 
             } catch (error) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('verifyPinBtn').style.display = 'flex';
-                showMessage('error', error.message);
+                hideLoading();
+                showMessage('error', 'Error de conexión: ' + error.message);
+                console.error('Login error:', error);
             }
         }
         
-        function clearLoginForm() {
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('pinCode').value = '';
-            tempUsername = '';
-            tempPassword = '';
+        async function forceLogout(username) {
+            if (confirm(`¿Forzar cierre de sesión para ${username}?`)) {
+                // Aquí implementarías la función de forzar cierre
+                showMessage('info', 'Función en desarrollo...');
+            }
+        }
+        
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loginBtn').disabled = true;
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('loginBtn').disabled = false;
         }
         
         function showMessage(type, text) {
             const messageBox = document.getElementById('messageBox');
-            if (!messageBox) return;
-            
             messageBox.className = `message-box ${type}`;
-            messageBox.innerHTML = `
-                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
-                                  type === 'success' ? 'check-circle' : 
-                                  'info-circle'}"></i>
-                ${text}
-            `;
+            messageBox.innerHTML = text;
             messageBox.style.display = 'block';
             
             if (type !== 'error') {
@@ -271,11 +215,6 @@
                     messageBox.style.display = 'none';
                 }, 5000);
             }
-        }
-        
-        // Función para crear partículas (opcional)
-        function createParticles() {
-            // Tu código de partículas existente
         }
     </script>
 </body>
