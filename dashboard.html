@@ -6,13 +6,10 @@
     <title>Dashboard | SecureStream Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
-
-<!-- AQUÍ VAN LOS LINKS DE CSS -->
-    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/dashboard.css">
-    
 </head>
 <body class="main-container">
+    
     <!-- Fondo animado -->
     <div class="bg-animation">
         <div class="grid-lines"></div>
@@ -22,9 +19,6 @@
             <div class="float-circle"></div>
         </div>
     </div>
-    
-    <!-- Partículas -->
-    <div class="particles" id="particles"></div>
     
     <!-- Header -->
     <div class="dashboard-header">
@@ -131,129 +125,193 @@
     </div>
     
     <!-- Scripts -->
-    <script src="js/auth-nocodb.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', async function() {
-        // Verificar autenticación
-        const isValid = await NocoDBAuth.verifySession();
-        
-        if (!isValid) {
-            window.location.href = 'index.html';
-            return;
-        }
-        
-        // Cargar información del usuario
-        const user = NocoDBAuth.getCurrentUser();
-        
-        if (!user) {
-            window.location.href = 'index.html';
-            return;
-        }
-        
-        // Actualizar UI
-        document.getElementById('usernameDisplay').textContent = user.name;
-        document.getElementById('infoUsername').textContent = user.name;
-        document.getElementById('infoUserType').textContent = 
-            user.user_type === 'admin' ? 'Administrador' : 'Usuario';
-        document.getElementById('infoStatus').textContent = user.status;
-        document.getElementById('infoStatus').style.color = 
-            user.status === 'active' ? '#00ff88' : '#ff4b4b';
-        document.getElementById('infoMaxDevices').textContent = user.max_devices;
-        
-        // Información de dispositivo
-        const deviceId = localStorage.getItem('nocodb_device_id') || 'No detectado';
-        document.getElementById('infoDeviceId').textContent = deviceId;
-        
-        // Configurar eventos
-        document.getElementById('logoutBtn').addEventListener('click', async function() {
-            await NocoDBAuth.logout();
-            window.location.href = 'index.html';
+    <script src="js/auth-system.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Dashboard cargado...');
+            
+            // Verificar autenticación
+            const isValid = await SecureAuth.verifySession();
+            
+            if (!isValid) {
+                console.log('No hay sesión válida, redirigiendo a login...');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Cargar información del usuario
+            const user = SecureAuth.getCurrentUser();
+            console.log('Usuario actual:', user);
+            
+            if (!user) {
+                console.log('No se pudo obtener usuario, redirigiendo...');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Actualizar UI con datos del usuario
+            updateUserInfo(user);
+            
+            // Configurar eventos de botones
+            setupEventListeners();
+            
+            // Configurar monitoreo de sesión
+            startSessionMonitoring();
+            
+            // Intentar cargar stream automáticamente
+            setTimeout(loadStream, 1000);
         });
         
-        document.getElementById('loadStreamBtn').addEventListener('click', loadStream);
-        document.getElementById('refreshStreamBtn').addEventListener('click', loadStream);
-        
-        // Cargar stream automáticamente
-        setTimeout(loadStream, 2000);
-        
-        // Monitorear sesión
-        startSessionMonitoring();
-    });
-    
-    // Función para cargar stream desde NocoDB
-    async function loadStream() {
-        const streamUrl = NocoDBAuth.getCurrentStream();
-        
-        if (!streamUrl) {
-            showMessage('error', 'No hay stream configurado para este usuario');
-            return;
+        function updateUserInfo(user) {
+            // Actualizar información en el header
+            document.getElementById('usernameDisplay').textContent = user.name;
+            
+            // Actualizar información en las cards
+            document.getElementById('infoUsername').textContent = user.name;
+            document.getElementById('infoUserType').textContent = 
+                user.user_type === 'admin' ? 'Administrador' : 'Usuario';
+            document.getElementById('infoStatus').textContent = user.status;
+            document.getElementById('infoStatus').style.color = 
+                user.status === 'active' ? '#00ff88' : '#ff4b4b';
+            document.getElementById('infoMaxDevices').textContent = user.max_devices || 1;
+            
+            // Actualizar información de dispositivo
+            const deviceId = localStorage.getItem('secure_stream_device') || 'No detectado';
+            document.getElementById('infoDeviceId').textContent = deviceId;
+            
+            // Actualizar tiempos
+            const now = new Date();
+            document.getElementById('infoLoginTime').textContent = 
+                now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('infoLastActivity').textContent = 
+                now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
         
-        try {
-            const videoPlayer = document.getElementById('liveStream');
-            const overlay = document.getElementById('videoOverlay');
+        function setupEventListeners() {
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', async function() {
+                console.log('Cerrando sesión...');
+                await SecureAuth.logout();
+                window.location.href = 'index.html';
+            });
             
-            // Verificar que el stream sea accesible
-            const testResponse = await fetch(streamUrl, { method: 'HEAD' });
+            // Cargar stream
+            document.getElementById('loadStreamBtn').addEventListener('click', loadStream);
+            document.getElementById('refreshStreamBtn').addEventListener('click', loadStream);
             
-            if (!testResponse.ok) {
-                throw new Error('El stream no está disponible');
-            }
+            // Verificar sesión
+            document.getElementById('checkSessionBtn').addEventListener('click', async function() {
+                const isValid = await SecureAuth.verifySession();
+                if (isValid) {
+                    showMessage('success', '✅ Sesión verificada correctamente');
+                } else {
+                    showMessage('error', '❌ Sesión inválida. Redirigiendo...');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                }
+            });
             
-            // Ocultar overlay y mostrar video
-            overlay.style.display = 'none';
-            videoPlayer.src = streamUrl;
-            videoPlayer.style.display = 'block';
-            
-            // Intentar reproducir
-            const playPromise = videoPlayer.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log('Auto-play prevented:', error);
-                });
-            }
-            
-            showMessage('success', 'Stream cargado desde NocoDB');
-            
-        } catch (error) {
-            console.error('Stream error:', error);
-            showMessage('error', 'Error al cargar el stream: ' + error.message);
-            
-            // Mostrar overlay de error
-            const overlay = document.getElementById('videoOverlay');
-            overlay.innerHTML = `
-                <i class="fas fa-exclamation-triangle" style="color: #ff4b4b;"></i>
-                <h2>Error al cargar el stream</h2>
-                <p style="margin: 15px 0; color: #ccc;">${error.message}</p>
-                <p style="font-size: 0.9rem; color: #aaa;">
-                    <i class="fas fa-database"></i>
-                    Stream URL: ${NocoDBAuth.getCurrentStream()?.substring(0, 50)}...
-                </p>
-                <button class="btn btn-primary" id="retryBtn">
-                    <i class="fas fa-redo"></i>
-                    Reintentar
-                </button>
-            `;
-            overlay.style.display = 'flex';
-            
-            document.getElementById('retryBtn').addEventListener('click', loadStream);
+            // Mostrar información
+            document.getElementById('showInfoBtn').addEventListener('click', function() {
+                const user = SecureAuth.getCurrentUser();
+                showMessage('info', 
+                    `Usuario: ${user.name}<br>
+                    Tipo: ${user.user_type}<br>
+                    Dispositivo: ${localStorage.getItem('secure_stream_device').substring(0, 15)}...`
+                );
+            });
         }
-    }
-    
-    // Monitorear sesión
-    function startSessionMonitoring() {
-        setInterval(async () => {
-            const isValid = await NocoDBAuth.verifySession();
-            if (!isValid) {
-                showMessage('error', 'Sesión expirada. Redirigiendo...');
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 3000);
-            }
-        }, 30000);
-    }
         
-        // Función para mostrar mensajes
+        async function loadStream() {
+            console.log('Cargando stream...');
+            
+            try {
+                const streamUrl = await SecureAuth.getCurrentStream();
+                
+                if (!streamUrl) {
+                    showMessage('error', '❌ No hay stream configurado');
+                    return;
+                }
+                
+                const videoPlayer = document.getElementById('liveStream');
+                const overlay = document.getElementById('videoOverlay');
+                
+                // Testear si el stream es accesible
+                const testResponse = await fetch(streamUrl, { method: 'HEAD' });
+                
+                if (!testResponse.ok) {
+                    throw new Error('El stream no está disponible');
+                }
+                
+                // Ocultar overlay y mostrar video
+                overlay.style.display = 'none';
+                videoPlayer.src = streamUrl;
+                videoPlayer.style.display = 'block';
+                
+                // Intentar reproducir automáticamente
+                const playPromise = videoPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log('Auto-play prevenido:', error);
+                        showMessage('warning', 'Haz clic en play para reproducir el video');
+                    });
+                }
+                
+                showMessage('success', '✅ Stream cargado correctamente');
+                
+                // Actualizar contador de tiempo
+                updateTimeCounter();
+                
+            } catch (error) {
+                console.error('Error al cargar stream:', error);
+                showMessage('error', '❌ Error al cargar el stream: ' + error.message);
+                
+                // Mostrar overlay de error
+                const overlay = document.getElementById('videoOverlay');
+                overlay.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="color: #ff4b4b;"></i>
+                    <h2>Error al cargar el stream</h2>
+                    <p style="margin: 15px 0; color: #ccc;">${error.message}</p>
+                    <button class="btn btn-primary" id="retryBtn">
+                        <i class="fas fa-redo"></i>
+                        Reintentar
+                    </button>
+                `;
+                overlay.style.display = 'flex';
+                
+                document.getElementById('retryBtn').addEventListener('click', loadStream);
+            }
+        }
+        
+        function updateTimeCounter() {
+            const timeElement = document.getElementById('infoTimeLeft');
+            let minutes = 60;
+            
+            const interval = setInterval(() => {
+                minutes--;
+                timeElement.textContent = `${minutes} min`;
+                timeElement.style.color = minutes < 10 ? '#ff4b4b' : '#00ff88';
+                
+                if (minutes <= 0) {
+                    clearInterval(interval);
+                    timeElement.textContent = 'Expirada';
+                    timeElement.style.color = '#ff4b4b';
+                    showMessage('warning', '⚠️ Tiempo de sesión expirado');
+                }
+            }, 60000); // Actualizar cada minuto
+        }
+        
+        function startSessionMonitoring() {
+            setInterval(async () => {
+                const isValid = await SecureAuth.verifySession();
+                if (!isValid) {
+                    showMessage('error', '❌ Sesión expirada. Redirigiendo...');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 3000);
+                }
+            }, 30000); // Verificar cada 30 segundos
+        }
+        
         function showMessage(type, text) {
             const messageEl = document.getElementById('message');
             if (!messageEl) return;
@@ -273,60 +331,6 @@
                 }, 5000);
             }
         }
-        
-        // Configurar protección básica
-        function setupProtection() {
-            // Deshabilitar clic derecho en el video
-            const videoPlayer = document.getElementById('liveStream');
-            if (videoPlayer) {
-                videoPlayer.addEventListener('contextmenu', function(e) {
-                    e.preventDefault();
-                    showMessage('warning', 'Acción no permitida en el reproductor');
-                });
-            }
-            
-            // Deshabilitar algunas teclas de desarrollo
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'F12' || 
-                    (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-                    (e.ctrlKey && e.shiftKey && e.key === 'J') ||
-                    (e.ctrlKey && e.shiftKey && e.key === 'C')) {
-                    e.preventDefault();
-                    showMessage('warning', 'Acceso restringido');
-                }
-            });
-        }
-        
-        // Función para crear partículas (si no están en el login)
-        function createParticles() {
-            const particlesContainer = document.getElementById('particles');
-            if (!particlesContainer) return;
-            
-            const particleCount = 30;
-            
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                
-                const left = Math.random() * 100;
-                const top = Math.random() * 100;
-                const size = Math.random() * 2 + 1;
-                const duration = Math.random() * 10 + 10;
-                const delay = Math.random() * 5;
-                
-                particle.style.left = `${left}%`;
-                particle.style.top = `${top}%`;
-                particle.style.width = `${size}px`;
-                particle.style.height = `${size}px`;
-                particle.style.animationDuration = `${duration}s`;
-                particle.style.animationDelay = `${delay}s`;
-                
-                particlesContainer.appendChild(particle);
-            }
-        }
-        
-        // Crear partículas si no existen
-        createParticles();
     </script>
 </body>
 </html>
