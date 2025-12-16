@@ -29,7 +29,7 @@
             <p id="loadingText">Verificando...</p>
         </div>
         
-        <!-- ÚNICO formulario -->
+        <!-- Formulario -->
         <div id="loginForm">
             <div class="input-group">
                 <label for="username" class="input-label">
@@ -37,8 +37,7 @@
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-user-circle"></i>
-                    <!-- SIN VALUE, SOLO PLACEHOLDER -->
-                    <input type="text" id="username" class="login-input" placeholder="Ingresa tu usuario">
+                    <input type="text" id="username" class="login-input" placeholder="admin">
                 </div>
             </div>
             
@@ -48,8 +47,7 @@
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
-                    <!-- SIN VALUE, SOLO PLACEHOLDER -->
-                    <input type="password" id="password" class="login-input" placeholder="Ingresa tu contraseña">
+                    <input type="password" id="password" class="login-input" placeholder="admin123">
                 </div>
             </div>
             
@@ -103,24 +101,22 @@
     <!-- Scripts -->
     <script src="js/auth-personal.js"></script>
     <script>
+        // Evitar múltiples redirecciones
+        let isRedirecting = false;
+        
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔧 Sistema cargado');
             
-            // Verificar sesión existente
-            const isAuthenticated = await SecureAuth.verifySession();
+            // DESACTIVAR VERIFICACIÓN AUTOMÁTICA PARA EVITAR BUCLE
+            // Solo verificar si hay sesión guardada, pero no redirigir automáticamente
+            const hasLocalSession = localStorage.getItem('secure_stream_session');
             
-            if (isAuthenticated) {
-                const user = SecureAuth.getCurrentUser();
-                console.log('✅ Sesión activa:', user?.username);
-                
-                if (user && user.user_type === 'admin') {
-                    window.location.href = 'admin.html';
-                } else if (user) {
-                    window.location.href = 'dashboard.html';
-                }
+            if (hasLocalSession) {
+                console.log('📱 Sesión encontrada en localStorage');
+                // NO redirigir automáticamente - dejar que el usuario haga login
             }
             
-            // Configurar eventos
+            // Configurar eventos del formulario
             const loginBtn = document.getElementById('loginBtn');
             const passwordInput = document.getElementById('password');
             
@@ -129,12 +125,14 @@
             passwordInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') handleLogin();
             });
-            
-            // Probar conexión inicial
-            await testConnection();
         });
         
         async function handleLogin() {
+            if (isRedirecting) {
+                console.log('⚠️ Ya se está procesando un login');
+                return;
+            }
+            
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             
@@ -144,40 +142,41 @@
             }
             
             // Mostrar loading
-            showLoading('Verificando sesión única...');
+            showLoading('Verificando credenciales...');
+            isRedirecting = true;
             
             try {
-                // Login directo
                 const result = await SecureAuth.login(username, password);
                 
                 hideLoading();
+                isRedirecting = false;
                 
                 if (result.success) {
                     showMessage('success', `✅ ¡Bienvenido ${result.user.name}!`);
                     
-                    // Redirigir después de 1 segundo
+                    // Redirigir después de 1.5 segundos
                     setTimeout(() => {
                         if (result.user.user_type === 'admin') {
+                            console.log('➡️ Redirigiendo a admin.html');
                             window.location.href = 'admin.html';
                         } else {
+                            console.log('➡️ Redirigiendo a dashboard.html');
                             window.location.href = 'dashboard.html';
                         }
-                    }, 1000);
+                    }, 1500);
                     
                 } else {
-                    // Mostrar error específico
                     let errorMsg = result.error;
                     
                     if (result.time_left) {
                         errorMsg += ` (${result.time_left} minutos restantes)`;
                         
-                        // Mostrar opción para forzar cierre si es admin
+                        // Opción para forzar cierre si es admin
                         if (username === 'admin') {
-                            errorMsg += `<br><br><button onclick="forceLogout('${username}')" 
-                                style="background: #ff4b4b; color: white; border: none; padding: 8px 15px; 
-                                border-radius: 5px; cursor: pointer; margin-top: 10px;">
-                                <i class="fas fa-sign-out-alt"></i> Forzar cierre de sesión
-                            </button>`;
+                            errorMsg += `<br><br>
+                                <button onclick="forceLogout('${username}')" class="force-logout-btn">
+                                    <i class="fas fa-sign-out-alt"></i> Forzar cierre de sesión
+                                </button>`;
                         }
                     }
                     
@@ -186,6 +185,7 @@
                 
             } catch (error) {
                 hideLoading();
+                isRedirecting = false;
                 showMessage('error', 'Error de conexión: ' + error.message);
                 console.error('Login error:', error);
             }
@@ -193,10 +193,13 @@
         
         async function forceLogout(username) {
             if (confirm(`¿Forzar cierre de sesión para ${username}?`)) {
-                const result = await SecureAuth.forceLogoutUser(username);
+                const result = await SecureAuth.forceLogout(username);
                 if (result.success) {
                     showMessage('success', result.message);
-                    setTimeout(() => location.reload(), 2000);
+                    setTimeout(() => {
+                        document.getElementById('username').value = username;
+                        document.getElementById('password').value = '';
+                    }, 1000);
                 } else {
                     showMessage('error', result.error);
                 }
@@ -229,20 +232,45 @@
 
         // Función para probar conexión - CORREGIDA
         async function testConnection() {
-            console.log('🔗 Probando conexión a Google Apps Script...');
+            console.log('🔗 Probando conexión...');
             
             try {
-                // Usa API_URL directamente del objeto SecureAuth
-                const response = await fetch(SecureAuth.config.API_URL + '?action=test');
+                // Usar la URL correcta
+                const response = await fetch(SecureAuth.API_URL + '?action=test');
                 const data = await response.json();
                 console.log('✅ Conexión OK:', data);
                 return true;
             } catch (error) {
                 console.error('❌ Error de conexión:', error);
-                showMessage('warning', '⚠️ Conexión lenta. Usando modo alternativo...');
                 return false;
             }
         }
+        
+        // Función para debug
+        window.debugSystem = function() {
+            console.log('=== DEBUG ===');
+            console.log('URL API:', SecureAuth.API_URL);
+            console.log('Dispositivo:', SecureAuth.getDeviceId());
+            console.log('Sesión:', localStorage.getItem('secure_stream_session'));
+            console.log('isRedirecting:', isRedirecting);
+        };
     </script>
+    
+    <style>
+        .force-logout-btn {
+            background: #ff4b4b;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .force-logout-btn:hover {
+            background: #ff3333;
+        }
+    </style>
 </body>
 </html>
