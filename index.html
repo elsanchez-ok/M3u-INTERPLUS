@@ -216,6 +216,26 @@
                 }, 5000);
             }
         }
+
+            // Función para probar conexión
+async function testConnection() {
+    console.log('🔗 Probando conexión a Google Apps Script...');
+    
+    try {
+        const response = await fetch(SecureAuth.config.SCRIPT_URL);
+        const data = await response.json();
+        console.log('✅ Conexión OK:', data);
+        return true;
+    } catch (error) {
+        console.error('❌ Error de conexión:', error);
+        return false;
+    }
+}
+
+// Llamar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    testConnection();
+});
     </script>
 </body>
 </html>
