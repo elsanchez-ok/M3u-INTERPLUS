@@ -1,15 +1,20 @@
-// auth-no-pin.js - Sistema SIN PIN
-class NoPinAuth {
+// auth-personal.js - Para cuenta personal de Google
+class PersonalGoogleAuth {
     constructor() {
+        // PEGA TU URL AQUÍ ↓
         this.config = {
-            SCRIPT_URL: 'https://script.google.com/a/macros/iteesa.edu.hn/s/AKfycbwEiu3caWpIpAfTfSjXDsmekLV7LOOXRVFx7_nt79eWzVBcQVRrRDQKgctNSyBrFaCX/exec',
+            API_URL: 'https://script.google.com/macros/s/TU_ID_NUEVO/exec',
             STORAGE_KEY: 'secure_stream_auth',
             DEVICE_KEY: 'secure_stream_device'
         };
+        
+        console.log('✅ PersonalGoogleAuth inicializado');
+        console.log('🔗 API URL:', this.config.API_URL);
     }
 
     generateDeviceId() {
-        return 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        const agent = navigator.userAgent.substring(0, 20).replace(/\W/g, '_');
+        return `dev_${Date.now()}_${Math.random().toString(36).substr(2, 6)}_${agent}`;
     }
 
     getDeviceId() {
@@ -21,27 +26,67 @@ class NoPinAuth {
         return deviceId;
     }
 
-    // Usar JSONP para evitar CORS
-    async callGoogleScript(action, data) {
-        return new Promise((resolve) => {
-            const callbackName = 'callback_' + Date.now();
-            const params = new URLSearchParams({
-                action: action,
-                callback: callbackName,
-                ...data
+    // Método PRINCIPAL para llamar al API
+    async callAPI(action, data = {}) {
+        try {
+            console.log(`📤 ${action}:`, data);
+            
+            // Usar POST para enviar datos (más seguro)
+            const response = await fetch(this.config.API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: action,
+                    ...data,
+                    timestamp: Date.now()
+                })
             });
             
-            const url = `${this.config.SCRIPT_URL}?${params}`;
+            const result = await response.json();
+            console.log(`📥 ${action} result:`, result);
             
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ ${action} error:`, error);
+            
+            // Intentar con GET si POST falla
+            return await this.callAPIWithGet(action, data);
+        }
+    }
+
+    // Método alternativo con GET (JSONP)
+    async callAPIWithGet(action, data) {
+        return new Promise((resolve) => {
+            const callbackName = 'cb_' + Date.now();
+            
+            // Construir URL
+            const params = new URLSearchParams();
+            params.append('action', action);
+            params.append('callback', callbackName);
+            
+            Object.keys(data).forEach(key => {
+                params.append(key, data[key]);
+            });
+            
+            const url = `${this.config.API_URL}?${params}`;
+            console.log('🔄 Intentando GET:', url.substring(0, 100) + '...');
+            
+            // Callback
             window[callbackName] = (response) => {
+                console.log('📥 GET response:', response);
                 resolve(response);
                 delete window[callbackName];
             };
             
+            // Script
             const script = document.createElement('script');
             script.src = url;
             script.onerror = () => {
                 resolve({ success: false, error: 'Error de conexión' });
+                delete window[callbackName];
             };
             
             document.head.appendChild(script);
@@ -56,47 +101,41 @@ class NoPinAuth {
     }
 
     async login(username, password) {
-        try {
-            const deviceId = this.getDeviceId();
+        const deviceId = this.getDeviceId();
+        
+        console.log(`🔐 Login: ${username} desde ${deviceId}`);
+        
+        const result = await this.callAPI('login', {
+            username: username,
+            password: password,
+            deviceId: deviceId
+        });
+        
+        if (result.success) {
+            // Guardar sesión local
+            const sessionData = {
+                user: result.user,
+                deviceId: deviceId,
+                loginTime: new Date().toISOString(),
+                expiresAt: result.expires_at || (Date.now() + (60 * 60000))
+            };
             
-            console.log(`📤 Login: ${username} desde ${deviceId}`);
+            localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(sessionData));
             
-            const result = await this.callGoogleScript('login', {
-                username: username,
-                password: password,
-                deviceId: deviceId
-            });
-            
-            console.log('📥 Respuesta:', result);
-            
-            if (result.success) {
-                // Guardar sesión local
-                const sessionData = {
-                    user: result.user,
-                    deviceId: deviceId,
-                    loginTime: new Date().toISOString(),
-                    expiresAt: result.expires_at || (Date.now() + (60 * 60000))
-                };
-                
-                localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(sessionData));
-            }
-            
-            return result;
-            
-        } catch (error) {
-            console.error('Login error:', error);
-            return { success: false, error: 'Error en login' };
+            console.log('✅ Sesión guardada para:', username);
         }
+        
+        return result;
     }
 
     async verifySession() {
         try {
-            const sessionData = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
+            const session = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
             
-            if (!sessionData) return false;
+            if (!session) return false;
             
             // Verificar expiración local
-            if (sessionData.expiresAt && sessionData.expiresAt < Date.now()) {
+            if (session.expiresAt && session.expiresAt < Date.now()) {
                 await this.logout();
                 return false;
             }
@@ -109,25 +148,47 @@ class NoPinAuth {
     }
 
     getCurrentUser() {
-        const sessionData = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
-        return sessionData ? sessionData.user : null;
+        const session = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
+        return session ? session.user : null;
     }
 
     async logout() {
         const user = this.getCurrentUser();
         if (user) {
-            await this.callGoogleScript('logout', { username: user.username });
+            await this.callAPI('logout', { username: user.username });
         }
         localStorage.removeItem(this.config.STORAGE_KEY);
     }
 
     getSessionTimeLeft() {
-        const sessionData = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
-        if (!sessionData || !sessionData.expiresAt) return 0;
+        const session = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
+        if (!session || !session.expiresAt) return 0;
         
-        const timeLeft = sessionData.expiresAt - Date.now();
+        const timeLeft = session.expiresAt - Date.now();
         return timeLeft > 0 ? Math.floor(timeLeft / 60000) : 0;
+    }
+
+    // Funciones de admin
+    async getAllUsers() {
+        const result = await this.callAPI('get_users');
+        return result.users || [];
+    }
+
+    async createUser(userData) {
+        return await this.callAPI('create_user', userData);
+    }
+
+    async forceLogoutUser(username) {
+        return await this.callAPI('force_logout', { username: username });
     }
 }
 
-const SecureAuth = new NoPinAuth();
+const SecureAuth = new PersonalGoogleAuth();
+
+// Debug
+window.debugPersonal = function() {
+    console.log('=== DEBUG PERSONAL ===');
+    console.log('API URL:', SecureAuth.config.API_URL);
+    console.log('Device:', localStorage.getItem('secure_stream_device'));
+    console.log('Session:', localStorage.getItem('secure_stream_auth'));
+};
