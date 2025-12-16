@@ -249,53 +249,81 @@
         }
         
         function loadSessions() {
-            const sessionsList = document.getElementById('sessionsList');
-            
-            try {
-                const activeSessions = JSON.parse(localStorage.getItem('active_sessions') || '{}');
-                const sessions = Object.entries(activeSessions);
-                
-                if (sessions.length === 0) {
-                    sessionsList.innerHTML = `
-                        <p style="color: #a0cfff; text-align: center; padding: 20px;">
-                            No hay sesiones activas
-                        </p>
-                    `;
-                } else {
-                    sessionsList.innerHTML = sessions.map(([username, data]) => `
-                        <div class="user-item" style="margin-bottom: 10px;">
-                            <div class="user-info">
-                                <strong>${username}</strong>
-                                <small>Dispositivo: ${data.deviceId.substring(0, 15)}...</small>
-                            </div>
-                            <button class="btn btn-sm btn-danger force-logout" data-username="${username}">
+    const sessionsList = document.getElementById('sessionsList');
+    
+    try {
+        // Obtener sesiones activas desde SecureAuth
+        SecureAuth.getActiveSessions().then(sessions => {
+            if (sessions.length === 0) {
+                sessionsList.innerHTML = `
+                    <p style="color: #a0cfff; text-align: center; padding: 20px;">
+                        No hay sesiones activas
+                    </p>
+                `;
+            } else {
+                sessionsList.innerHTML = sessions.map(session => `
+                    <div class="user-item" style="margin-bottom: 10px;">
+                        <div class="user-info">
+                            <strong>${session.name} (@${session.username})</strong>
+                            <small>
+                                Dispositivo: ${session.deviceId.substring(0, 15)}...<br>
+                                Tiempo restante: ${session.timeLeft} minutos<br>
+                                Inició: ${new Date(session.loginTime).toLocaleTimeString()}
+                            </small>
+                        </div>
+                        <div class="user-actions">
+                            <span class="badge ${session.user_type === 'admin' ? 'badge-warning' : 'badge-info'}">
+                                ${session.user_type === 'admin' ? 'ADMIN' : 'USER'}
+                            </span>
+                            <button class="btn btn-sm btn-danger force-logout" 
+                                    data-username="${session.username}"
+                                    title="Forzar cierre de sesión">
                                 <i class="fas fa-sign-out-alt"></i>
                             </button>
                         </div>
-                    `).join('');
-                    
-                    // Agregar eventos a botones de logout forzado
-                    document.querySelectorAll('.force-logout').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const username = this.getAttribute('data-username');
-                            forceLogout(username);
-                        });
+                    </div>
+                `).join('');
+                
+                // Agregar eventos a botones de logout forzado
+                document.querySelectorAll('.force-logout').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const username = this.getAttribute('data-username');
+                        if (confirm(`¿Forzar cierre de sesión para ${username}?\nEsta acción cerrará su sesión en todos los dispositivos.`)) {
+                            SecureAuth.forceLogoutUser(username).then(success => {
+                                if (success) {
+                                    showMessage('success', `✅ Sesión de ${username} cerrada forzosamente`);
+                                    loadSessions(); // Recargar lista
+                                } else {
+                                    showMessage('error', '❌ Error al cerrar sesión');
+                                }
+                            });
+                        }
                     });
-                }
-                
-                // Actualizar estadísticas
-                document.getElementById('activeSessions').textContent = sessions.length;
-                document.getElementById('sysActiveSessions').textContent = sessions.length;
-                
-            } catch (error) {
-                console.error('Error cargando sesiones:', error);
-                sessionsList.innerHTML = `
-                    <p style="color: #ff9b9b; text-align: center; padding: 20px;">
-                        Error al cargar sesiones
-                    </p>
-                `;
+                });
             }
-        }
+            
+            // Actualizar estadísticas
+            document.getElementById('activeSessions').textContent = sessions.length;
+            document.getElementById('sysActiveSessions').textContent = sessions.length;
+            
+        }).catch(error => {
+            console.error('Error cargando sesiones:', error);
+            sessionsList.innerHTML = `
+                <p style="color: #ff9b9b; text-align: center; padding: 20px;">
+                    Error al cargar sesiones
+                </p>
+            `;
+        });
+        
+    } catch (error) {
+        console.error('Error cargando sesiones:', error);
+        sessionsList.innerHTML = `
+            <p style="color: #ff9b9b; text-align: center; padding: 20px;">
+                Error al cargar sesiones
+            </p>
+        `;
+    }
+}
         
         function updateStats() {
             // Aquí podrías agregar más estadísticas
