@@ -2,7 +2,7 @@
 class SecureStreamAuth {
     constructor() {
         // ⚠️ REEMPLAZA ESTA URL CON LA DE TU APPS SCRIPT
-        this.API_URL = 'https://script.google.com/macros/s/TU_ID_APPS_SCRIPT/exec';
+        this.API_URL = 'https://script.google.com/macros/s/AKfycbxB3lJLiei_7YtkKyQ39OsEhScDCyZnoYoAS50ZKdd5cyq3_L3wFi5Pki0pilQZM35aCw/exec';
         
         this.STORAGE_KEY = 'secure_stream_session';
         this.DEVICE_KEY = 'secure_stream_device';
