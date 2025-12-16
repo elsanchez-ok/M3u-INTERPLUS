@@ -30,35 +30,75 @@ class GoogleSheetsAuth {
 
     // Llamar a la API
     async callAPI(action, data = {}) {
-        try {
-            console.log(`📤 Enviando ${action}:`, data);
-            
-            const response = await fetch(this.config.API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    action, 
-                    ...data,
-                    timestamp: Date.now()
-                })
-            });
-            
-            const result = await response.json();
-            console.log(`📥 Respuesta ${action}:`, result);
-            
-            return result;
-            
-        } catch (error) {
-            console.error('❌ Error en API call:', error);
-            return { 
-                success: false, 
-                error: 'Error de conexión con el servidor' 
-            };
-        }
+    try {
+        console.log(`📤 Enviando ${action}:`, data);
+        
+        // Usar Google Apps Script con parámetros GET (evita CORS)
+        const params = new URLSearchParams({
+            action: action,
+            ...data,
+            timestamp: Date.now()
+        });
+        
+        // IMPORTANTE: Cambia tu URL por esta estructura
+        const url = `https://script.google.com/macros/s/AKfycbxocLXjNoaRscKOteVm_OsPTdk4LdnU_JtuRffGZSoy6XaDOZVG4giJ3d7FyAwk_tYVjQ/exec?${params.toString()}`;
+        
+        const response = await fetch(url, {
+            method: 'GET', // Usar GET en lugar de POST
+            mode: 'no-cors' // Esto evita el error CORS
+        });
+        
+        // Para 'no-cors', no podemos leer la respuesta directamente
+        // Necesitamos un enfoque diferente...
+        
+        return await this.callAPIWithJsonp(action, data);
+        
+    } catch (error) {
+        console.error('❌ Error en API call:', error);
+        return { 
+            success: false, 
+            error: 'Error de conexión con el servidor' 
+        };
     }
+}
 
+// Método alternativo usando JSONP
+async callAPIWithJsonp(action, data) {
+    return new Promise((resolve) => {
+        // Crear callback único
+        const callbackName = 'googleSheetsCallback_' + Date.now();
+        
+        // Crear script
+        const script = document.createElement('script');
+        const params = new URLSearchParams({
+            action: action,
+            ...data,
+            callback: callbackName
+        });
+        
+        script.src = `https://script.google.com/macros/s/AKfycbxocLXjNoaRscKOteVm_OsPTdk4LdnU_JtuRffGZSoy6XaDOZVG4giJ3d7FyAwk_tYVjQ/exec?${params.toString()}`;
+        
+        // Crear función callback global
+        window[callbackName] = (response) => {
+            resolve(response);
+            delete window[callbackName];
+            document.head.removeChild(script);
+        };
+        
+        document.head.appendChild(script);
+        
+        // Timeout por si falla
+        setTimeout(() => {
+            if (window[callbackName]) {
+                resolve({ 
+                    success: false, 
+                    error: 'Timeout en la conexión' 
+                });
+                delete window[callbackName];
+            }
+        }, 10000);
+    });
+}
     // INICIAR SESIÓN (Paso 1: Obtener PIN)
     async login(username, password) {
         try {
