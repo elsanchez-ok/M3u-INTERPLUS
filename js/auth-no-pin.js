@@ -2,7 +2,7 @@
 class NoPinAuth {
     constructor() {
         this.config = {
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxocLXjNoaRscKOteVm_OsPTdk4LdnU_JtuRffGZSoy6XaDOZVG4giJ3d7FyAwk_tYVjQ/exec',
+            SCRIPT_URL: 'https://script.google.com/a/macros/iteesa.edu.hn/s/AKfycbwEiu3caWpIpAfTfSjXDsmekLV7LOOXRVFx7_nt79eWzVBcQVRrRDQKgctNSyBrFaCX/exec',
             STORAGE_KEY: 'secure_stream_auth',
             DEVICE_KEY: 'secure_stream_device'
         };
