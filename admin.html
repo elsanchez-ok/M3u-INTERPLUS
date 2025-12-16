@@ -6,11 +6,7 @@
     <title>Admin Panel | SecureStream Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
-
- <!-- AQUÍ VAN LOS LINKS DE CSS -->
-    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/admin.css">
-    
 </head>
 <body class="main-container">
     <!-- Fondo animado -->
@@ -47,23 +43,23 @@
     <!-- Estadísticas -->
     <div class="stats-grid">
         <div class="stat-item">
-            <i class="fas fa-users" style="font-size: 2rem; color: #00b7ff;"></i>
-            <div class="stat-value" id="totalUsers">3</div>
+            <i class="fas fa-users" style="color: #00b7ff;"></i>
+            <div class="stat-value" id="totalUsers">0</div>
             <div class="stat-label">Usuarios Totales</div>
         </div>
         <div class="stat-item">
-            <i class="fas fa-user-check" style="font-size: 2rem; color: #00ff88;"></i>
-            <div class="stat-value" id="activeUsers">3</div>
+            <i class="fas fa-user-check" style="color: #00ff88;"></i>
+            <div class="stat-value" id="activeUsers">0</div>
             <div class="stat-label">Usuarios Activos</div>
         </div>
         <div class="stat-item">
-            <i class="fas fa-desktop" style="font-size: 2rem; color: #ffaa00;"></i>
-            <div class="stat-value" id="activeSessions">1</div>
+            <i class="fas fa-desktop" style="color: #ffaa00;"></i>
+            <div class="stat-value" id="activeSessions">0</div>
             <div class="stat-label">Sesiones Activas</div>
         </div>
         <div class="stat-item">
-            <i class="fas fa-video" style="font-size: 2rem; color: #ff4b4b;"></i>
-            <div class="stat-value" id="activeStreams">2</div>
+            <i class="fas fa-video" style="color: #ff4b4b;"></i>
+            <div class="stat-value" id="activeStreams">1</div>
             <div class="stat-label">Streams Activos</div>
         </div>
     </div>
@@ -75,8 +71,11 @@
             <h3><i class="fas fa-users-cog"></i> Gestión de Usuarios</h3>
             <div class="user-list" id="usersList">
                 <!-- Usuarios cargados dinámicamente -->
+                <p style="color: #a0cfff; text-align: center; padding: 20px;">
+                    Cargando usuarios...
+                </p>
             </div>
-            <button class="btn btn-success" style="width: 100%; margin-top: 15px;">
+            <button class="btn btn-success" style="width: 100%; margin-top: 15px;" id="addUserBtn">
                 <i class="fas fa-plus"></i>
                 Agregar Usuario
             </button>
@@ -85,10 +84,13 @@
         <!-- Sesiones Activas -->
         <div class="admin-card">
             <h3><i class="fas fa-desktop"></i> Sesiones Activas</h3>
-            <div id="sessionsList">
+            <div id="sessionsList" style="min-height: 100px;">
                 <!-- Sesiones cargadas dinámicamente -->
+                <p style="color: #a0cfff; text-align: center; padding: 20px;">
+                    Cargando sesiones...
+                </p>
             </div>
-            <button class="btn btn-warning" style="width: 100%; margin-top: 15px;" onclick="refreshSessions()">
+            <button class="btn btn-warning" style="width: 100%; margin-top: 15px;" id="refreshSessionsBtn">
                 <i class="fas fa-sync"></i>
                 Actualizar Sesiones
             </button>
@@ -99,17 +101,17 @@
             <h3><i class="fas fa-cogs"></i> Configuración</h3>
             <div class="form-group">
                 <label>URL por defecto del Stream</label>
-                <input type="text" value="https://rst.cyphn.site/memfs/366c450b-a9f7-40c8-92df-f398d8cb693c.m3u8" readonly>
+                <input type="text" id="streamUrl" value="https://rst.cyphn.site/memfs/366c450b-a9f7-40c8-92df-f398d8cb693c.m3u8">
             </div>
             <div class="form-group">
                 <label>Tiempo de sesión (minutos)</label>
-                <input type="number" value="60" min="5">
+                <input type="number" id="sessionTime" value="60" min="5">
             </div>
             <div class="form-group">
                 <label>Máximo de dispositivos</label>
-                <input type="number" value="1" min="1">
+                <input type="number" id="maxDevices" value="1" min="1">
             </div>
-            <button class="btn btn-primary" style="width: 100%;">
+            <button class="btn btn-primary" style="width: 100%;" id="saveConfigBtn">
                 <i class="fas fa-save"></i>
                 Guardar Configuración
             </button>
@@ -126,8 +128,8 @@
                 <p><strong>Modo:</strong> Sin servidor (Frontend Only)</p>
             </div>
             <div>
-                <p><strong>Sesiones activas:</strong> <span id="sysActiveSessions">1</span></p>
-                <p><strong>Usuarios registrados:</strong> <span id="sysTotalUsers">3</span></p>
+                <p><strong>Sesiones activas:</strong> <span id="sysActiveSessions">0</span></p>
+                <p><strong>Usuarios registrados:</strong> <span id="sysTotalUsers">0</span></p>
                 <p><strong>Tiempo activo:</strong> <span id="sysUptime">0 min</span></p>
             </div>
             <div>
@@ -148,72 +150,233 @@
     </div>
     
     <!-- Scripts -->
-    
-    <script src="js/auth-nocodb.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', async function() {
-        // Verificar autenticación y que sea admin
-        const isValid = await NocoDBAuth.verifySession();
-        
-        if (!isValid) {
-            window.location.href = 'index.html';
-            return;
-        }
-        
-        const user = NocoDBAuth.getCurrentUser();
-        
-        if (!user || user.user_type !== 'admin') {
-            window.location.href = 'dashboard.html';
-            return;
-        }
-        
-        // Configurar logout
-        document.getElementById('logoutBtn').addEventListener('click', async function() {
-            await NocoDBAuth.logout();
-            window.location.href = 'index.html';
-        });
-        
-        // Cargar datos de usuarios desde NocoDB
-        loadUsersFromNocoDB();
-    });
-    
-    // Cargar usuarios desde NocoDB
-    async function loadUsersFromNocoDB() {
-        try {
-            // Nota: Necesitarías agregar una función a NocoDBAuth para obtener todos los usuarios
-            // Por ahora, mostramos solo el usuario actual
+    <script src="js/auth-system.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Admin panel cargado...');
             
-            const currentUser = NocoDBAuth.getCurrentUser();
-            const usersList = document.getElementById('usersList');
+            // 1. Verificar autenticación
+            const isValid = await SecureAuth.verifySession();
             
-            if (usersList && currentUser) {
-                usersList.innerHTML = `
-                    <div class="user-item">
-                        <div class="user-info">
-                            <strong>${currentUser.name}</strong><br>
-                            <small style="color: #a0cfff;">@${currentUser.username}</small>
-                        </div>
-                        <div class="user-actions">
-                            <span class="badge ${currentUser.user_type === 'admin' ? 'badge-warning' : 'badge-info'}">
-                                ${currentUser.user_type === 'admin' ? 'ADMIN' : 'USER'}
-                            </span>
-                            <span class="badge ${currentUser.status === 'active' ? 'badge-success' : 'badge-danger'}">
-                                ${currentUser.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
-                            </span>
-                        </div>
-                    </div>
-                `;
+            if (!isValid) {
+                console.log('No autenticado, redirigiendo...');
+                window.location.href = 'index.html';
+                return;
             }
             
-            // Actualizar estadísticas
-            document.getElementById('totalUsers').textContent = '1';
-            document.getElementById('activeUsers').textContent = currentUser.status === 'active' ? '1' : '0';
-            document.getElementById('sysTotalUsers').textContent = '1';
+            // 2. Verificar que sea admin
+            const user = SecureAuth.getCurrentUser();
             
-        } catch (error) {
-            console.error('Error loading users:', error);
+            if (!user || user.user_type !== 'admin') {
+                console.log('No es admin, redirigiendo...');
+                window.location.href = 'dashboard.html';
+                return;
+            }
+            
+            console.log('Admin verificadof:', user);
+            
+            // 3. Configurar eventos
+            setupEventListeners();
+            
+            // 4. Cargar datos iniciales
+            loadInitialData();
+            
+            // 5. Iniciar contador de tiempo activo
+            startUptimeCounter();
+        });
+        
+        function setupEventListeners() {
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', async function() {
+                await SecureAuth.logout();
+                window.location.href = 'index.html';
+            });
+            
+            // Actualizar sesiones
+            document.getElementById('refreshSessionsBtn').addEventListener('click', loadSessions);
+            
+            // Guardar configuración
+            document.getElementById('saveConfigBtn').addEventListener('click', saveConfiguration);
+            
+            // Agregar usuario
+            document.getElementById('addUserBtn').addEventListener('click', showAddUserModal);
         }
-    }
-</script>
+        
+        function loadInitialData() {
+            loadUsers();
+            loadSessions();
+            updateStats();
+        }
+        
+        function loadUsers() {
+            // En una versión real, esto vendría de una base de datos
+            // Por ahora usamos datos locales
+            const usersList = document.getElementById('usersList');
+            
+            // Datos de ejemplo (basados en auth-system.js)
+            const users = [
+                {
+                    username: 'admin',
+                    name: 'Administrador',
+                    user_type: 'admin',
+                    status: 'active',
+                    email: 'admin@stream.com'
+                }
+            ];
+            
+            usersList.innerHTML = users.map(user => `
+                <div class="user-item">
+                    <div class="user-info">
+                        <strong>${user.name}</strong>
+                        <small>@${user.username}</small>
+                    </div>
+                    <div class="user-actions">
+                        <span class="badge ${user.user_type === 'admin' ? 'badge-warning' : 'badge-info'}">
+                            ${user.user_type === 'admin' ? 'ADMIN' : 'USER'}
+                        </span>
+                        <span class="badge ${user.status === 'active' ? 'badge-success' : 'badge-danger'}">
+                            ${user.status === 'active' ? 'ACTIVO' : 'INACTIVO'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Actualizar estadísticas
+            document.getElementById('totalUsers').textContent = users.length;
+            document.getElementById('activeUsers').textContent = 
+                users.filter(u => u.status === 'active').length;
+            document.getElementById('sysTotalUsers').textContent = users.length;
+        }
+        
+        function loadSessions() {
+            const sessionsList = document.getElementById('sessionsList');
+            
+            try {
+                const activeSessions = JSON.parse(localStorage.getItem('active_sessions') || '{}');
+                const sessions = Object.entries(activeSessions);
+                
+                if (sessions.length === 0) {
+                    sessionsList.innerHTML = `
+                        <p style="color: #a0cfff; text-align: center; padding: 20px;">
+                            No hay sesiones activas
+                        </p>
+                    `;
+                } else {
+                    sessionsList.innerHTML = sessions.map(([username, data]) => `
+                        <div class="user-item" style="margin-bottom: 10px;">
+                            <div class="user-info">
+                                <strong>${username}</strong>
+                                <small>Dispositivo: ${data.deviceId.substring(0, 15)}...</small>
+                            </div>
+                            <button class="btn btn-sm btn-danger force-logout" data-username="${username}">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                    
+                    // Agregar eventos a botones de logout forzado
+                    document.querySelectorAll('.force-logout').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const username = this.getAttribute('data-username');
+                            forceLogout(username);
+                        });
+                    });
+                }
+                
+                // Actualizar estadísticas
+                document.getElementById('activeSessions').textContent = sessions.length;
+                document.getElementById('sysActiveSessions').textContent = sessions.length;
+                
+            } catch (error) {
+                console.error('Error cargando sesiones:', error);
+                sessionsList.innerHTML = `
+                    <p style="color: #ff9b9b; text-align: center; padding: 20px;">
+                        Error al cargar sesiones
+                    </p>
+                `;
+            }
+        }
+        
+        function updateStats() {
+            // Aquí podrías agregar más estadísticas
+            const now = new Date();
+            document.getElementById('sysUptime').textContent = 
+                `${Math.floor((now.getTime() - 1680000000000) / 60000)} min`; // Ejemplo
+        }
+        
+        function startUptimeCounter() {
+            let minutes = 0;
+            setInterval(() => {
+                minutes++;
+                document.getElementById('sysUptime').textContent = `${minutes} min`;
+            }, 60000);
+        }
+        
+        function forceLogout(username) {
+            if (confirm(`¿Forzar cierre de sesión para ${username}?`)) {
+                try {
+                    const activeSessions = JSON.parse(localStorage.getItem('active_sessions') || '{}');
+                    delete activeSessions[username];
+                    localStorage.setItem('active_sessions', JSON.stringify(activeSessions));
+                    
+                    showMessage('success', `✅ Sesión de ${username} cerrada forzosamente`);
+                    loadSessions();
+                } catch (error) {
+                    showMessage('error', '❌ Error al cerrar sesión');
+                }
+            }
+        }
+        
+        function saveConfiguration() {
+            const streamUrl = document.getElementById('streamUrl').value;
+            const sessionTime = document.getElementById('sessionTime').value;
+            const maxDevices = document.getElementById('maxDevices').value;
+            
+            // Guardar en localStorage (en versión real, guardarías en base de datos)
+            localStorage.setItem('admin_config', JSON.stringify({
+                streamUrl,
+                sessionTime,
+                maxDevices,
+                lastUpdated: new Date().toISOString()
+            }));
+            
+            showMessage('success', '✅ Configuración guardada correctamente');
+        }
+        
+        function showAddUserModal() {
+            const username = prompt('Nombre de usuario:');
+            if (!username) return;
+            
+            const password = prompt('Contraseña:');
+            if (!password) return;
+            
+            const name = prompt('Nombre completo:');
+            if (!name) return;
+            
+            const user_type = prompt('Tipo (admin/user):', 'user');
+            
+            // Aquí deberías llamar a SecureAuth.createUser()
+            // Por ahora mostramos mensaje
+            showMessage('info', `Usuario ${username} agregado (función en desarrollo)`);
+        }
+        
+        function showMessage(type, text) {
+            const messageEl = document.getElementById('message');
+            messageEl.className = `message ${type}`;
+            messageEl.innerHTML = `
+                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
+                                  type === 'success' ? 'check-circle' : 
+                                  'info-circle'}"></i>
+                ${text}
+            `;
+            messageEl.style.display = 'block';
+            
+            if (type !== 'error') {
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
 </body>
 </html>
