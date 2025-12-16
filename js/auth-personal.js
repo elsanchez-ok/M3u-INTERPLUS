@@ -1,17 +1,17 @@
-// auth-personal.js - VERSIÓN SIMPLIFICADA Y FUNCIONAL
+// auth-personal.js - VERSIÓN COMPLETA Y FUNCIONAL
 class SecureStreamAuth {
     constructor() {
-        // ⚠️ REEMPLAZA ESTA URL CON LA DE TU APPS SCRIPT
+        // ⚠️ REEMPLAZA CON TU URL REAL DE APPS SCRIPT
         this.API_URL = 'https://script.google.com/macros/s/AKfycbxB3lJLiei_7YtkKyQ39OsEhScDCyZnoYoAS50ZKdd5cyq3_L3wFi5Pki0pilQZM35aCw/exec';
         
         this.STORAGE_KEY = 'secure_stream_session';
         this.DEVICE_KEY = 'secure_stream_device';
         
-        console.log('🔧 SecureStreamAuth inicializado');
+        console.log('✅ SecureStreamAuth inicializado');
         console.log('🔗 URL API:', this.API_URL);
     }
     
-    // Generar ID único del dispositivo
+    // Generar ID del dispositivo
     getDeviceId() {
         let deviceId = localStorage.getItem(this.DEVICE_KEY);
         if (!deviceId) {
@@ -21,52 +21,39 @@ class SecureStreamAuth {
         return deviceId;
     }
     
-    // Enviar solicitud al API - VERSIÓN CORREGIDA
+    // Enviar solicitud al servidor
     async sendRequest(action, data = {}) {
-        const url = this.API_URL;
-        const deviceId = this.getDeviceId();
-        
-        // DATOS COMPLETOS A ENVIAR
-        const requestData = {
-            action: action,
-            deviceId: deviceId,
-            timestamp: Date.now(),
-            ...data
-        };
-        
-        console.log(`📤 Enviando ${action}:`, requestData);
+        console.log(`📤 Enviando: ${action}`);
         
         try {
-            // USAR text/plain PARA EVITAR CORS
-            const response = await fetch(url, {
+            const response = await fetch(this.API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'text/plain;charset=utf-8'
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify({
+                    action: action,
+                    deviceId: this.getDeviceId(),
+                    ...data
+                })
             });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
             
             const result = await response.json();
             console.log(`📥 Respuesta ${action}:`, result);
-            
             return result;
             
         } catch (error) {
             console.error(`❌ Error en ${action}:`, error);
             return {
                 success: false,
-                error: 'Error de conexión: ' + error.message
+                error: 'Error de conexión'
             };
         }
     }
     
-    // LOGIN PRINCIPAL
+    // Iniciar sesión
     async login(username, password) {
-        console.log(`🔐 Intentando login: ${username}`);
+        console.log(`🔐 Login intento: ${username}`);
         
         const result = await this.sendRequest('login', {
             username: username.trim(),
@@ -74,12 +61,12 @@ class SecureStreamAuth {
         });
         
         if (result.success && result.user) {
-            // GUARDAR SESIÓN LOCAL
+            // Guardar sesión local
             const session = {
                 user: result.user,
                 deviceId: this.getDeviceId(),
                 loginTime: new Date().toISOString(),
-                expiresAt: result.expires_at || (Date.now() + (60 * 60000))
+                expiresAt: result.expires_at || (Date.now() + 3600000) // 1 hora
             };
             
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
@@ -89,28 +76,49 @@ class SecureStreamAuth {
         return result;
     }
     
-    // VERIFICAR SESIÓN
-    verifySession() {
+    // Verificar sesión - VERSIÓN CORREGIDA (sin bucle infinito)
+    async verifySession() {
         try {
             const sessionStr = localStorage.getItem(this.STORAGE_KEY);
-            if (!sessionStr) return false;
+            if (!sessionStr) {
+                console.log('❌ No hay sesión guardada');
+                return false;
+            }
             
             const session = JSON.parse(sessionStr);
             
             // Verificar expiración
-            if (session.expiresAt && session.expiresAt < Date.now()) {
+            const now = Date.now();
+            if (session.expiresAt && session.expiresAt < now) {
+                console.log('⌛ Sesión expirada');
                 localStorage.removeItem(this.STORAGE_KEY);
                 return false;
             }
             
-            return true;
+            // Verificar con el servidor
+            console.log('🔍 Verificando sesión con servidor...');
+            const user = session.user;
+            if (user && user.username) {
+                const result = await this.sendRequest('verify_session', {
+                    username: user.username,
+                    deviceId: session.deviceId
+                });
+                
+                if (result.success) {
+                    console.log('✅ Sesión verificada en servidor');
+                    return true;
+                }
+            }
+            
+            return false;
             
         } catch (error) {
+            console.error('❌ Error verificando sesión:', error);
             return false;
         }
     }
     
-    // OBTENER USUARIO ACTUAL
+    // Obtener usuario actual
     getCurrentUser() {
         try {
             const sessionStr = localStorage.getItem(this.STORAGE_KEY);
@@ -124,7 +132,7 @@ class SecureStreamAuth {
         }
     }
     
-    // CERRAR SESIÓN
+    // Cerrar sesión
     async logout() {
         const user = this.getCurrentUser();
         if (user) {
@@ -134,18 +142,18 @@ class SecureStreamAuth {
         console.log('🚪 Sesión cerrada');
     }
     
-    // FORZAR CIERRE (admin)
+    // Forzar cierre (admin)
     async forceLogout(username) {
         return await this.sendRequest('force_logout', { username: username });
     }
     
-    // OBTENER TODOS LOS USUARIOS (admin)
+    // Obtener usuarios (admin)
     async getUsers() {
         const result = await this.sendRequest('get_users');
         return result.users || [];
     }
     
-    // PROBAR CONEXIÓN
+    // Probar conexión
     async testConnection() {
         console.log('🔗 Probando conexión...');
         const result = await this.sendRequest('test');
@@ -153,14 +161,5 @@ class SecureStreamAuth {
     }
 }
 
-// CREAR INSTANCIA GLOBAL
+// Crear instancia global
 window.SecureAuth = new SecureStreamAuth();
-
-// Función de depuración
-window.debugAuth = function() {
-    console.log('=== DEBUG ===');
-    console.log('URL API:', SecureAuth.API_URL);
-    console.log('Dispositivo:', SecureAuth.getDeviceId());
-    console.log('Sesión:', localStorage.getItem('secure_stream_session'));
-    console.log('Usuario:', SecureAuth.getCurrentUser());
-};
