@@ -1,56 +1,21 @@
-// auth-simple.js - Sistema SUPER SIMPLE con PIN compartido
-class SimpleAuthSystem {
+// auth-google.js - Sistema de autenticación con Google Sheets
+class GoogleSheetsAuth {
     constructor() {
         this.config = {
+            API_URL: 'https://script.google.com/macros/s/TU_SCRIPT_ID/exec', // PEGA TU URL AQUÍ
             STORAGE_KEY: 'secure_stream_auth',
             DEVICE_KEY: 'secure_stream_device',
-            PIN_KEY: 'current_pin',
-            PIN_EXPIRES_KEY: 'pin_expires',
             SESSION_TIMEOUT: 60 // minutos
         };
         
-        // PIN FIJO que TODOS los dispositivos deben conocer
-        // ¡CAMBIA ESTE PIN!
-        this.MASTER_PIN = '1234';
-        
-        // Base de datos LOCAL (en cada dispositivo)
-        this.localDB = {
-            users: [
-                {
-                    id: 1,
-                    username: 'admin',
-                    password: 'admin123',
-                    name: 'Administrador',
-                    email: 'admin@stream.com',
-                    user_type: 'admin',
-                    status: 'active',
-                    pin: this.MASTER_PIN // Todos tienen el mismo PIN
-                },
-                {
-                    id: 2,
-                    username: 'usuario',
-                    password: 'user123',
-                    name: 'Usuario Normal',
-                    email: 'usuario@stream.com',
-                    user_type: 'user',
-                    status: 'active',
-                    pin: this.MASTER_PIN
-                }
-            ],
-            streams: [
-                {
-                    id: 1,
-                    name: 'Stream Principal',
-                    url: 'https://rst.cyphn.site/memfs/366c450b-a9f7-40c8-92df-f398d8cb693c.m3u8',
-                    is_active: true
-                }
-            ]
-        };
+        console.log('✅ GoogleSheetsAuth inicializado');
     }
 
     // Generar ID de dispositivo
     generateDeviceId() {
-        return 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substr(2, 9);
+        return `device_${timestamp}_${random}`;
     }
 
     getDeviceId() {
@@ -58,152 +23,154 @@ class SimpleAuthSystem {
         if (!deviceId) {
             deviceId = this.generateDeviceId();
             localStorage.setItem(this.config.DEVICE_KEY, deviceId);
+            console.log('Nuevo dispositivo registrado:', deviceId);
         }
         return deviceId;
     }
 
-    // Generar PIN temporal (expira en 10 minutos)
-    generateTempPin() {
-        const pin = Math.floor(1000 + Math.random() * 9000); // 1000-9999
-        const expiresAt = Date.now() + (10 * 60000); // 10 minutos
-        
-        localStorage.setItem(this.config.PIN_KEY, pin.toString());
-        localStorage.setItem(this.config.PIN_EXPIRES_KEY, expiresAt.toString());
-        
-        return pin;
+    // Llamar a la API
+    async callAPI(action, data = {}) {
+        try {
+            console.log(`📤 Enviando ${action}:`, data);
+            
+            const response = await fetch(this.config.API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    action, 
+                    ...data,
+                    timestamp: Date.now()
+                })
+            });
+            
+            const result = await response.json();
+            console.log(`📥 Respuesta ${action}:`, result);
+            
+            return result;
+            
+        } catch (error) {
+            console.error('❌ Error en API call:', error);
+            return { 
+                success: false, 
+                error: 'Error de conexión con el servidor' 
+            };
+        }
     }
 
-    // Verificar PIN
-    verifyPin(inputPin) {
-        const savedPin = localStorage.getItem(this.config.PIN_KEY);
-        const expiresAt = localStorage.getItem(this.config.PIN_EXPIRES_KEY);
-        
-        if (!savedPin || !expiresAt) {
-            return false;
-        }
-        
-        if (Date.now() > parseInt(expiresAt)) {
-            // PIN expirado
-            localStorage.removeItem(this.config.PIN_KEY);
-            localStorage.removeItem(this.config.PIN_EXPIRES_KEY);
-            return false;
-        }
-        
-        return inputPin === savedPin || inputPin === this.MASTER_PIN;
-    }
-
-    // INICIAR SESIÓN SUPER SIMPLE
+    // INICIAR SESIÓN (Paso 1: Obtener PIN)
     async login(username, password) {
         try {
             const deviceId = this.getDeviceId();
             
-            console.log(`Login intentado: ${username} desde ${deviceId}`);
+            const result = await this.callAPI('login', {
+                username: username,
+                password: password,
+                deviceId: deviceId
+            });
             
-            // 1. Buscar usuario
-            const user = this.localDB.users.find(u => 
-                u.username === username && u.password === password
-            );
-            
-            if (!user) {
-                throw new Error('❌ Usuario o contraseña incorrectos');
-            }
-            
-            if (user.status !== 'active') {
-                throw new Error('❌ Cuenta desactivada');
-            }
-            
-            // 2. Mostrar diálogo para ingresar PIN
-            // (En la práctica, esto se haría en el HTML)
-            // Por ahora simulamos que siempre pasa
-            const pinRequired = true;
-            
-            if (pinRequired) {
-                // En la implementación real, esto vendría de un input en HTML
-                // Por ahora, asumimos que el PIN es correcto
-                const pinIsValid = true; // Cambiar por verificación real
-                
-                if (!pinIsValid) {
-                    throw new Error('❌ PIN incorrecto o expirado');
-                }
-            }
-            
-            // 3. Calcular expiración
-            const now = new Date();
-            const expiresAt = new Date(now.getTime() + (this.config.SESSION_TIMEOUT * 60000));
-            
-            // 4. Crear sesión
-            const sessionData = {
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    name: user.name,
-                    email: user.email,
-                    user_type: user.user_type,
-                    status: user.status
-                },
-                deviceId: deviceId,
-                loginTime: now.toISOString(),
-                expiresAt: expiresAt.getTime(),
-                pinUsed: true
-            };
-            
-            // 5. Guardar localmente
-            localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(sessionData));
-            
-            console.log(`✅ Login exitoso para ${username}`);
-            
-            return {
-                success: true,
-                user: sessionData.user,
-                deviceId: deviceId,
-                expiresAt: expiresAt
-            };
+            return result;
             
         } catch (error) {
-            console.error('Login Error:', error.message);
-            return {
-                success: false,
-                error: error.message
+            console.error('Login error:', error);
+            return { 
+                success: false, 
+                error: 'Error en el proceso de login' 
             };
         }
     }
 
-    // VERIFICAR SESIÓN (solo local)
+    // VERIFICAR PIN (Paso 2: Confirmar PIN)
+    async verifyPin(username, pin) {
+        try {
+            const result = await this.callAPI('verify_pin', {
+                username: username,
+                pin: pin
+            });
+            
+            if (result.success) {
+                // Guardar sesión localmente
+                const sessionData = {
+                    user: result.user,
+                    deviceId: this.getDeviceId(),
+                    loginTime: new Date().toISOString(),
+                    expiresAt: result.session_expires || (Date.now() + (this.config.SESSION_TIMEOUT * 60000))
+                };
+                
+                localStorage.setItem(this.config.STORAGE_KEY, JSON.stringify(sessionData));
+                
+                console.log('✅ Sesión guardada para:', username);
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error('Verify PIN error:', error);
+            return { 
+                success: false, 
+                error: 'Error verificando PIN' 
+            };
+        }
+    }
+
+    // VERIFICAR SESIÓN ACTIVA
     async verifySession() {
         try {
             const sessionData = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
-            const deviceId = localStorage.getItem(this.config.DEVICE_KEY);
+            const deviceId = this.getDeviceId();
             
             if (!sessionData || !deviceId) {
+                console.log('No hay sesión local');
                 return false;
             }
             
-            // Verificar dispositivo
-            if (sessionData.deviceId !== deviceId) {
-                await this.logout();
-                return false;
-            }
-            
-            // Verificar expiración
+            // Verificar expiración local
             if (sessionData.expiresAt && sessionData.expiresAt < Date.now()) {
+                console.log('Sesión local expirada');
                 await this.logout();
                 return false;
             }
             
-            return true;
+            // Verificar con Google Sheets
+            const result = await this.callAPI('verify_session', {
+                username: sessionData.user.username,
+                deviceId: deviceId
+            });
+            
+            return result.valid === true;
             
         } catch (error) {
+            console.error('Verify session error:', error);
             return false;
         }
     }
 
-    // Obtener usuario actual
+    // OBTENER USUARIO ACTUAL
     getCurrentUser() {
         const sessionData = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
         return sessionData ? sessionData.user : null;
     }
 
-    // Obtener tiempo restante
+    // CERRAR SESIÓN
+    async logout() {
+        try {
+            const user = this.getCurrentUser();
+            if (user) {
+                await this.callAPI('logout', {
+                    username: user.username
+                });
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            // Siempre limpiar local
+            localStorage.removeItem(this.config.STORAGE_KEY);
+            console.log('✅ Sesión local cerrada');
+        }
+    }
+
+    // OBTENER TIEMPO RESTANTE
     getSessionTimeLeft() {
         try {
             const sessionData = JSON.parse(localStorage.getItem(this.config.STORAGE_KEY) || 'null');
@@ -214,41 +181,56 @@ class SimpleAuthSystem {
             
             if (timeLeft <= 0) return 0;
             
-            return Math.floor(timeLeft / 60000);
+            return Math.floor(timeLeft / 60000); // minutos
         } catch (error) {
             return 0;
         }
     }
 
-    // CERRAR SESIÓN
-    async logout() {
+    // ========== FUNCIONES DE ADMIN ==========
+
+    // OBTENER TODOS LOS USUARIOS
+    async getAllUsers() {
         try {
-            // Solo limpia local, no afecta a otros dispositivos
-            localStorage.removeItem(this.config.STORAGE_KEY);
-            console.log('✅ Sesión cerrada localmente');
+            const result = await this.callAPI('get_users');
+            return result.users || [];
         } catch (error) {
-            console.error('Logout Error:', error);
+            console.error('Get users error:', error);
+            return [];
         }
     }
 
-    // Obtener stream
-    async getCurrentStream() {
-        try {
-            const stream = this.localDB.streams.find(s => s.is_active);
-            return stream ? stream.url : null;
-        } catch (error) {
-            return null;
-        }
+    // CREAR NUEVO USUARIO
+    async createUser(userData) {
+        return await this.callAPI('create_user', userData);
+    }
+
+    // FORZAR CIERRE DE SESIÓN
+    async forceLogoutUser(username) {
+        return await this.callAPI('force_logout', {
+            target_username: username
+        });
+    }
+
+    // OBTENER SESIONES ACTIVAS
+    async getActiveSessions() {
+        const users = await this.getAllUsers();
+        return users.filter(user => user.has_active_session);
     }
 }
 
-// Instancia global
-const SecureAuth = new SimpleAuthSystem();
+// Crear instancia global
+const SecureAuth = new GoogleSheetsAuth();
 
 // Función para debug
-function debugSimple() {
-    console.log('=== DEBUG SIMPLE ===');
+function debugGoogleAuth() {
+    console.log('=== DEBUG GOOGLE SHEETS AUTH ===');
+    console.log('API URL:', SecureAuth.config.API_URL);
     console.log('Dispositivo:', localStorage.getItem('secure_stream_device'));
     console.log('Sesión:', localStorage.getItem('secure_stream_auth'));
-    console.log('PIN actual:', localStorage.getItem('current_pin'));
+    
+    // Probar conexión
+    SecureAuth.callAPI('test').then(result => {
+        console.log('Conexión API:', result);
+    });
 }
