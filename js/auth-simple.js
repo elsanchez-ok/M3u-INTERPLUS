@@ -2,7 +2,7 @@
 class GoogleSheetsAuth {
     constructor() {
         this.config = {
-            API_URL: 'https://script.google.com/macros/s/TU_SCRIPT_ID/exec', // PEGA TU URL AQUÍ
+            API_URL: 'https://script.google.com/a/macros/iteesa.edu.hn/s/AKfycbxocLXjNoaRscKOteVm_OsPTdk4LdnU_JtuRffGZSoy6XaDOZVG4giJ3d7FyAwk_tYVjQ/exec', // PEGA TU URL AQUÍ
             STORAGE_KEY: 'secure_stream_auth',
             DEVICE_KEY: 'secure_stream_device',
             SESSION_TIMEOUT: 60 // minutos
