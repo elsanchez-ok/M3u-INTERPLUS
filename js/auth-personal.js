@@ -1,150 +1,92 @@
-// auth-simple.js - VERSIÓN ESTABLE Y FUNCIONAL
+// auth-personal.js - VERSIÓN ULTRA SIMPLIFICADA Y FUNCIONAL
 class SimpleAuth {
     constructor() {
+        // ⚠️ REEMPLAZA ESTA URL CON LA TUYA
+        this.API_URL = 'https://script.google.com/macros/s/AKfycbxB3lJLiei_7YtkKyQ39OsEhScDCyZnoYoAS50ZKdd5cyq3_L3wFi5Pki0pilQZM35aCw/exec';
+        
         this.STORAGE_KEY = 'secure_stream_session';
         this.DEVICE_KEY = 'secure_stream_device';
-        this.LAST_VERIFY_KEY = 'last_verify_time';
         
-        console.log('🔧 SimpleAuth inicializado');
+        console.log('✅ Auth inicializado');
+        console.log('🔗 URL API:', this.API_URL);
     }
     
-    // ============================================
-    // VERIFICACIÓN DE SESIÓN - VERSIÓN CORREGIDA
-    // ============================================
-    verifySession() {
-        console.log('🔍 Verificando sesión...');
-        
-        try {
-            const sessionStr = localStorage.getItem(this.STORAGE_KEY);
-            if (!sessionStr) {
-                console.log('📭 No hay sesión guardada');
-                return false;
-            }
-            
-            const session = JSON.parse(sessionStr);
-            
-            // DEBUG: Mostrar información de la sesión
-            console.log('📋 Sesión encontrada:', {
-                user: session.user?.username,
-                expiresAt: session.expiresAt,
-                now: Date.now(),
-                diferencia: session.expiresAt - Date.now()
-            });
-            
-            // Verificar que tenga los datos mínimos
-            if (!session.user || !session.user.username) {
-                console.log('⚠️ Sesión corrupta - sin usuario');
-                this.clearSession();
-                return false;
-            }
-            
-            // Verificar expiración SOLO si existe expiresAt
-            if (session.expiresAt) {
-                const now = Date.now();
-                const timeLeft = session.expiresAt - now;
-                
-                console.log(`⏰ Tiempo restante: ${Math.floor(timeLeft / 60000)} minutos`);
-                
-                if (timeLeft <= 0) {
-                    console.log('⌛ Sesión expirada por tiempo');
-                    this.clearSession();
-                    return false;
-                }
-                
-                // Renovar la sesión si quedan menos de 5 minutos
-                if (timeLeft < (5 * 60000)) {
-                    console.log('🔄 Renovando sesión...');
-                    session.expiresAt = now + (60 * 60000); // Renovar a 60 minutos
-                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
-                }
-            } else {
-                // Si no hay expiresAt, crear uno
-                console.log('➕ Creando tiempo de expiración');
-                session.expiresAt = Date.now() + (60 * 60000);
-                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
-            }
-            
-            // Evitar verificaciones demasiado frecuentes
-            const lastVerify = localStorage.getItem(this.LAST_VERIFY_KEY) || 0;
-            if (Date.now() - lastVerify < 5000) { // 5 segundos mínimo entre verificaciones
-                console.log('⚡ Verificación demasiado rápida, omitiendo...');
-                return true;
-            }
-            
-            localStorage.setItem(this.LAST_VERIFY_KEY, Date.now().toString());
-            
-            console.log('✅ Sesión válida');
-            return true;
-            
-        } catch (error) {
-            console.error('❌ Error verificando sesión:', error);
-            return false;
-        }
-    }
-    
-    // ============================================
-    // LOGIN - VERSIÓN SIMPLIFICADA Y ESTABLE
-    // ============================================
-    async login(username, password) {
-        console.log(`🔐 Login para: ${username}`);
-        
-        // Simular respuesta del servidor
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                // Credenciales válidas
-                const validUsers = {
-                    'admin': { password: 'admin123', name: 'Administrador', user_type: 'admin', status: 'active' },
-                    'usuario': { password: 'user123', name: 'Usuario Normal', user_type: 'user', status: 'active' }
-                };
-                
-                if (validUsers[username] && validUsers[username].password === password) {
-                    // Crear sesión
-                    const session = {
-                        user: {
-                            username: username,
-                            name: validUsers[username].name,
-                            user_type: validUsers[username].user_type,
-                            status: validUsers[username].status
-                        },
-                        deviceId: this.getDeviceId(),
-                        loginTime: new Date().toISOString(),
-                        expiresAt: Date.now() + (60 * 60000) // 60 minutos desde AHORA
-                    };
-                    
-                    // Guardar sesión
-                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
-                    
-                    console.log('✅ Login exitoso, sesión guardada');
-                    console.log('📅 Expira:', new Date(session.expiresAt).toLocaleTimeString());
-                    
-                    resolve({
-                        success: true,
-                        user: session.user,
-                        expires_at: session.expiresAt,
-                        message: `¡Bienvenido ${session.user.name}!`
-                    });
-                } else {
-                    resolve({
-                        success: false,
-                        error: 'Usuario o contraseña incorrectos'
-                    });
-                }
-            }, 1000); // Simular delay de red
-        });
-    }
-    
-    // ============================================
-    // FUNCIONES AUXILIARES
-    // ============================================
+    // Generar ID del dispositivo
     getDeviceId() {
         let deviceId = localStorage.getItem(this.DEVICE_KEY);
         if (!deviceId) {
-            deviceId = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            deviceId = 'dev_' + Date.now();
             localStorage.setItem(this.DEVICE_KEY, deviceId);
         }
         return deviceId;
     }
     
+    // Login SIMPLIFICADO - sin verificar sesiones previas
+    async login(username, password) {
+        console.log(`🔐 Login intento: ${username}`);
+        
+        try {
+            const response = await fetch(this.API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    action: 'login',
+                    username: username.trim(),
+                    password: password,
+                    deviceId: this.getDeviceId(),
+                    timestamp: Date.now()
+                })
+            });
+            
+            const result = await response.json();
+            console.log('📥 Respuesta login:', result);
+            
+            if (result.success) {
+                // Guardar sesión local
+                const session = {
+                    user: result.user,
+                    deviceId: this.getDeviceId(),
+                    loginTime: new Date().toISOString(),
+                    expiresAt: Date.now() + (60 * 60000) // 60 minutos
+                };
+                
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
+                console.log('✅ Sesión guardada');
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error('❌ Error en login:', error);
+            return {
+                success: false,
+                error: 'Error de conexión con el servidor'
+            };
+        }
+    }
+    
+    // Verificar sesión local SOLO
+    verifySession() {
+        try {
+            const sessionStr = localStorage.getItem(this.STORAGE_KEY);
+            if (!sessionStr) return false;
+            
+            const session = JSON.parse(sessionStr);
+            
+            // Verificar si ha expirado
+            if (session.expiresAt && session.expiresAt < Date.now()) {
+                localStorage.removeItem(this.STORAGE_KEY);
+                return false;
+            }
+            
+            return true;
+            
+        } catch (error) {
+            return false;
+        }
+    }
+    
+    // Obtener usuario actual
     getCurrentUser() {
         try {
             const sessionStr = localStorage.getItem(this.STORAGE_KEY);
@@ -152,79 +94,50 @@ class SimpleAuth {
             
             const session = JSON.parse(sessionStr);
             return session.user;
+            
         } catch (error) {
             return null;
         }
     }
     
-    getSessionTimeLeft() {
-        try {
-            const sessionStr = localStorage.getItem(this.STORAGE_KEY);
-            if (!sessionStr) return 0;
-            
-            const session = JSON.parse(sessionStr);
-            if (!session.expiresAt) return 60; // Valor por defecto
-            
-            const timeLeft = session.expiresAt - Date.now();
-            return timeLeft > 0 ? Math.floor(timeLeft / 60000) : 0;
-        } catch (error) {
-            return 0;
-        }
-    }
-    
-    clearSession() {
-        localStorage.removeItem(this.STORAGE_KEY);
-        console.log('🧹 Sesión limpiada');
-    }
-    
+    // Cerrar sesión
     async logout() {
         const user = this.getCurrentUser();
         if (user) {
-            console.log(`🚪 Cerrando sesión de ${user.username}`);
+            try {
+                await fetch(this.API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'logout',
+                        username: user.username,
+                        timestamp: Date.now()
+                    })
+                });
+            } catch (error) {
+                console.log('⚠️ Error al notificar logout al servidor');
+            }
         }
-        this.clearSession();
-    }
-    
-    // Para el admin panel
-    getActiveSessions() {
-        const user = this.getCurrentUser();
-        if (!user) return [];
         
-        return [{
-            username: user.username,
-            name: user.name,
-            deviceId: this.getDeviceId(),
-            loginTime: new Date().toISOString(),
-            timeLeft: this.getSessionTimeLeft(),
-            user_type: user.user_type
-        }];
+        localStorage.removeItem(this.STORAGE_KEY);
+        console.log('🚪 Sesión local cerrada');
     }
     
-    async forceLogoutUser(username) {
-        console.log(`⚡ Forzando logout para: ${username}`);
-        // Simular éxito
-        return true;
+    // Probar conexión con Google Apps Script
+    async testConnection() {
+        console.log('🔗 Probando conexión...');
+        
+        try {
+            const response = await fetch(this.API_URL + '?action=test');
+            const data = await response.json();
+            console.log('✅ Conexión OK:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Error de conexión:', error);
+            return { success: false, error: error.message };
+        }
     }
 }
 
 // Crear instancia global
 window.SecureAuth = new SimpleAuth();
-
-// Función de debug
-window.debugAuth = function() {
-    console.log('=== DEBUG AUTH ===');
-    console.log('Session:', localStorage.getItem('secure_stream_session'));
-    console.log('Device:', localStorage.getItem('secure_stream_device'));
-    
-    const sessionStr = localStorage.getItem('secure_stream_session');
-    if (sessionStr) {
-        try {
-            const session = JSON.parse(sessionStr);
-            console.log('Usuario:', session.user);
-            console.log('Expira en:', new Date(session.expiresAt).toLocaleString());
-            console.log('Tiempo restante:', Math.floor((session.expiresAt - Date.now()) / 60000) + ' minutos');
-        } catch (e) {
-            console.error('Error parseando sesión:', e);
-        }
-    }
-};
