@@ -37,7 +37,8 @@
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-user-circle"></i>
-                    <input type="text" id="username" class="login-input" placeholder="admin" value="admin">
+                    <!-- SIN VALUE, SOLO PLACEHOLDER -->
+                    <input type="text" id="username" class="login-input" placeholder="Ingresa tu usuario">
                 </div>
             </div>
             
@@ -47,7 +48,8 @@
                 </label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" class="login-input" placeholder="admin123" value="admin123">
+                    <!-- SIN VALUE, SOLO PLACEHOLDER -->
+                    <input type="password" id="password" class="login-input" placeholder="Ingresa tu contraseña">
                 </div>
             </div>
             
@@ -99,7 +101,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/auth-no-pin.js"></script>
+    <script src="js/auth-personal.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔧 Sistema cargado');
@@ -127,6 +129,9 @@
             passwordInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') handleLogin();
             });
+            
+            // Probar conexión inicial
+            await testConnection();
         });
         
         async function handleLogin() {
@@ -142,7 +147,7 @@
             showLoading('Verificando sesión única...');
             
             try {
-                // Login directo (SIN PIN)
+                // Login directo
                 const result = await SecureAuth.login(username, password);
                 
                 hideLoading();
@@ -188,8 +193,13 @@
         
         async function forceLogout(username) {
             if (confirm(`¿Forzar cierre de sesión para ${username}?`)) {
-                // Aquí implementarías la función de forzar cierre
-                showMessage('info', 'Función en desarrollo...');
+                const result = await SecureAuth.forceLogoutUser(username);
+                if (result.success) {
+                    showMessage('success', result.message);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showMessage('error', result.error);
+                }
             }
         }
         
@@ -217,25 +227,22 @@
             }
         }
 
-            // Función para probar conexión
-async function testConnection() {
-    console.log('🔗 Probando conexión a Google Apps Script...');
-    
-    try {
-        const response = await fetch(SecureAuth.config.SCRIPT_URL);
-        const data = await response.json();
-        console.log('✅ Conexión OK:', data);
-        return true;
-    } catch (error) {
-        console.error('❌ Error de conexión:', error);
-        return false;
-    }
-}
-
-// Llamar al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    testConnection();
-});
+        // Función para probar conexión - CORREGIDA
+        async function testConnection() {
+            console.log('🔗 Probando conexión a Google Apps Script...');
+            
+            try {
+                // Usa API_URL directamente del objeto SecureAuth
+                const response = await fetch(SecureAuth.config.API_URL + '?action=test');
+                const data = await response.json();
+                console.log('✅ Conexión OK:', data);
+                return true;
+            } catch (error) {
+                console.error('❌ Error de conexión:', error);
+                showMessage('warning', '⚠️ Conexión lenta. Usando modo alternativo...');
+                return false;
+            }
+        }
     </script>
 </body>
 </html>
